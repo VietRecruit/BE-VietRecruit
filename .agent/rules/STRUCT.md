@@ -73,7 +73,6 @@ The project follows a **Modular Monolith** approach with a **Layered Architectur
 -   **Framework**: Spring Boot 3.4.2
 -   **Database**: PostgreSQL
 -   **Caching**: Redis
--   **Vector DB**: Qdrant
 -   **Migration**: Flyway
 -   **Messaging**: Kafka
 -   **Search**: Elasticsearch
