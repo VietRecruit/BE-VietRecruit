@@ -10,50 +10,50 @@ import org.springframework.transaction.annotation.Transactional;
 import com.vietrecruit.common.exception.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.user.dto.request.UserRequest;
-import com.vietrecruit.feature.user.dto.response.UserResponse;
+import com.vietrecruit.feature.user.dto.response.AdminUserResponse;
 import com.vietrecruit.feature.user.entity.User;
 import com.vietrecruit.feature.user.mapper.UserMapper;
 import com.vietrecruit.feature.user.repository.UserRepository;
-import com.vietrecruit.feature.user.service.UserService;
+import com.vietrecruit.feature.user.service.AdminUserService;
 
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class UserServiceImpl implements UserService {
+public class AdminUserServiceImpl implements AdminUserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
 
     @Override
     @Transactional
-    public UserResponse create(UserRequest request) {
+    public AdminUserResponse create(UserRequest request) {
         if (request.getEmail() != null && userRepository.existsByEmail(request.getEmail())) {
             throw new ApiException(ApiErrorCode.USER_EMAIL_CONFLICT);
         }
         User user = userMapper.toEntity(request);
         user = userRepository.save(user);
-        return userMapper.toResponse(user);
+        return userMapper.toAdminResponse(user);
     }
 
     @Override
-    public UserResponse get(UUID id) {
+    public AdminUserResponse get(UUID id) {
         User user =
                 userRepository
                         .findByIdWithRolesAndPermissions(id)
                         .orElseThrow(() -> new ApiException(ApiErrorCode.NOT_FOUND));
-        return userMapper.toResponse(user);
+        return userMapper.toAdminResponse(user);
     }
 
     @Override
-    public Page<UserResponse> list(Pageable pageable) {
-        return userRepository.findAll(pageable).map(userMapper::toResponse);
+    public Page<AdminUserResponse> list(Pageable pageable) {
+        return userRepository.findAll(pageable).map(userMapper::toAdminResponse);
     }
 
     @Override
     @Transactional
-    public UserResponse update(UUID id, UserRequest request) {
+    public AdminUserResponse update(UUID id, UserRequest request) {
         User user =
                 userRepository
                         .findById(id)
@@ -67,7 +67,7 @@ public class UserServiceImpl implements UserService {
 
         userMapper.updateEntity(user, request);
         user = userRepository.save(user);
-        return userMapper.toResponse(user);
+        return userMapper.toAdminResponse(user);
     }
 
     @Override

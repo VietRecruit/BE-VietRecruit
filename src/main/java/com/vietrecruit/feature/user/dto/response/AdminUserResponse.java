@@ -16,9 +16,10 @@ import lombok.Setter;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserResponse {
+public class AdminUserResponse {
 
     private UUID id;
+    private UUID companyId;
     private String email;
     private String fullName;
     private String phone;
@@ -29,6 +30,12 @@ public class UserResponse {
     private String location;
     private LocalDate dob;
     private String gender;
+    private Boolean isActive;
+    private Boolean isLocked;
+    private Short failedAttempts;
+    private Instant lockUntil;
+    private Instant lastLoginAt;
     private Set<String> roles;
     private Instant createdAt;
+    private Instant updatedAt;
 }
