@@ -24,58 +24,58 @@ import com.vietrecruit.common.response.ApiResponse;
 import com.vietrecruit.common.response.ApiSuccessCode;
 import com.vietrecruit.common.response.PageResponse;
 import com.vietrecruit.feature.user.dto.request.UserRequest;
-import com.vietrecruit.feature.user.dto.response.UserResponse;
-import com.vietrecruit.feature.user.service.UserService;
+import com.vietrecruit.feature.user.dto.response.AdminUserResponse;
+import com.vietrecruit.feature.user.service.AdminUserService;
 
-import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import lombok.RequiredArgsConstructor;
 
 @Validated
 @RestController
 @RequiredArgsConstructor
-@RequestMapping(ApiConstants.User.ROOT)
-public class UserController extends BaseController {
+@RequestMapping(ApiConstants.AdminUser.ROOT)
+public class AdminUserController extends BaseController {
 
-    private final UserService userService;
+    private final AdminUserService adminUserService;
 
     @PreAuthorize("hasAuthority('USER:MANAGE')")
-    @PostMapping(ApiConstants.User.CREATE)
-    public ResponseEntity<ApiResponse<UserResponse>> create(
+    @PostMapping(ApiConstants.AdminUser.CREATE)
+    public ResponseEntity<ApiResponse<AdminUserResponse>> create(
             @Valid @RequestBody UserRequest request) {
         return ResponseEntity.ok(
                 ApiResponse.success(
-                        ApiSuccessCode.USER_CREATE_SUCCESS, userService.create(request)));
+                        ApiSuccessCode.USER_CREATE_SUCCESS, adminUserService.create(request)));
     }
 
-    @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
-    @GetMapping(ApiConstants.User.GET)
-    public ResponseEntity<ApiResponse<UserResponse>> get(@PathVariable UUID id) {
+    @PreAuthorize("hasAuthority('USER:MANAGE')")
+    @GetMapping(ApiConstants.AdminUser.GET)
+    public ResponseEntity<ApiResponse<AdminUserResponse>> get(@PathVariable UUID id) {
         return ResponseEntity.ok(
-                ApiResponse.success(ApiSuccessCode.USER_FETCH_SUCCESS, userService.get(id)));
+                ApiResponse.success(ApiSuccessCode.USER_FETCH_SUCCESS, adminUserService.get(id)));
     }
 
     @PreAuthorize("hasAuthority('USER:MANAGE')")
     @GetMapping
-    public ResponseEntity<ApiResponse<PageResponse<UserResponse>>> list(
+    public ResponseEntity<ApiResponse<PageResponse<AdminUserResponse>>> list(
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(
                 ApiResponse.success(
                         ApiSuccessCode.USER_LIST_SUCCESS,
-                        PageResponse.from(userService.list(pageable))));
-    }
-
-    @PutMapping(ApiConstants.User.UPDATE)
-    public ResponseEntity<ApiResponse<UserResponse>> update(
-            @PathVariable UUID id, @Valid @RequestBody UserRequest request) {
-        return ResponseEntity.ok(
-                ApiResponse.success(
-                        ApiSuccessCode.USER_UPDATE_SUCCESS, userService.update(id, request)));
+                        PageResponse.from(adminUserService.list(pageable))));
     }
 
     @PreAuthorize("hasAuthority('USER:MANAGE')")
-    @DeleteMapping(ApiConstants.User.DELETE)
+    @PutMapping(ApiConstants.AdminUser.UPDATE)
+    public ResponseEntity<ApiResponse<AdminUserResponse>> update(
+            @PathVariable UUID id, @Valid @RequestBody UserRequest request) {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        ApiSuccessCode.USER_UPDATE_SUCCESS, adminUserService.update(id, request)));
+    }
+
+    @PreAuthorize("hasAuthority('USER:DELETE')")
+    @DeleteMapping(ApiConstants.AdminUser.DELETE)
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
-        userService.delete(id);
+        adminUserService.delete(id);
         return ResponseEntity.ok(ApiResponse.success(ApiSuccessCode.USER_DELETE_SUCCESS));
     }
 }
