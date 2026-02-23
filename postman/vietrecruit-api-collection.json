@@ -188,7 +188,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/client/users/me",
+							"raw": "{{baseUrl}}/users/me",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -222,7 +222,7 @@
 							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/client/users/me",
+							"raw": "{{baseUrl}}/users/me",
 							"host": [
 								"{{baseUrl}}"
 							],

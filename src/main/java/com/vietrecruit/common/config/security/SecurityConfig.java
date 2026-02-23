@@ -42,7 +42,7 @@ public class SecurityConfig {
         "/health/**"
     };
 
-    private static final String[] clientEndpoints = {"/vietrecruit/client/**"};
+    private static final String[] clientEndpoints = {"/vietrecruit/users/**"};
     private static final String[] adminEndpoints = {"/vietrecruit/admin/**"};
 
     @Bean

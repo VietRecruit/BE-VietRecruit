@@ -20,8 +20,6 @@ import com.vietrecruit.feature.user.entity.User;
 @Mapper(componentModel = "spring")
 public interface UserMapper {
 
-    // --- Client mappings ---
-
     UserProfileResponse toProfileResponse(User user);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
@@ -39,8 +37,6 @@ public interface UserMapper {
     @Mapping(target = "deletedAt", ignore = true)
     @Mapping(target = "roles", ignore = true)
     void updateProfile(@MappingTarget User user, UpdateProfileRequest request);
-
-    // --- Admin mappings ---
 
     @Mapping(target = "roles", source = "roles", qualifiedByName = "rolesToCodes")
     AdminUserResponse toAdminResponse(User user);
@@ -73,8 +69,6 @@ public interface UserMapper {
     @Mapping(target = "deletedAt", ignore = true)
     @Mapping(target = "roles", ignore = true)
     void updateEntity(@MappingTarget User user, UserRequest request);
-
-    // --- Shared helpers ---
 
     @Named("rolesToCodes")
     default Set<String> rolesToCodes(Set<Role> roles) {

@@ -73,14 +73,12 @@ public class AuthServiceImpl implements AuthService {
             throw new ApiException(ApiErrorCode.AUTH_INVALID_CREDENTIALS);
         }
 
-        // Reset failed attempts on successful login
         user.setFailedAttempts((short) 0);
         user.setIsLocked(false);
         user.setLockUntil(null);
         user.setLastLoginAt(Instant.now());
         userRepository.save(user);
 
-        // Load roles and permissions eagerly
         User userWithRoles =
                 userRepository
                         .findByIdWithRolesAndPermissions(user.getId())
@@ -95,14 +93,11 @@ public class AuthServiceImpl implements AuthService {
                         .map(Permission::getCode)
                         .collect(Collectors.toSet());
 
-        // Cache permissions in Redis
         authCacheService.cachePermissions(user.getId(), permissionCodes);
 
-        // Generate tokens
         String accessToken = jwtService.generateAccessToken(user.getId(), roleCodes);
         String rawRefreshToken = jwtService.generateRefreshToken();
 
-        // Store hashed refresh token
         RefreshToken refreshToken =
                 RefreshToken.builder()
                         .userId(user.getId())
@@ -164,11 +159,9 @@ public class AuthServiceImpl implements AuthService {
             throw new ApiException(ApiErrorCode.AUTH_REFRESH_TOKEN_EXPIRED);
         }
 
-        // Revoke old refresh token (rotation)
         storedToken.setRevoked(true);
         refreshTokenRepository.save(storedToken);
 
-        // Load user with roles
         User user =
                 userRepository
                         .findByIdWithRolesAndPermissions(storedToken.getUserId())
@@ -183,10 +176,8 @@ public class AuthServiceImpl implements AuthService {
                         .map(Permission::getCode)
                         .collect(Collectors.toSet());
 
-        // Refresh permissions cache
         authCacheService.cachePermissions(user.getId(), permissionCodes);
 
-        // Generate new token pair
         String newAccessToken = jwtService.generateAccessToken(user.getId(), roleCodes);
         String newRawRefreshToken = jwtService.generateRefreshToken();
 
@@ -215,28 +206,22 @@ public class AuthServiceImpl implements AuthService {
             long remainingTtlMs = jwtService.getRemainingTtlMs(claims);
             java.util.UUID userId = jwtService.extractUserId(claims);
 
-            // Blacklist access token
             authCacheService.blacklistToken(jti, remainingTtlMs / 1000);
 
-            // Revoke all refresh tokens for user
             refreshTokenRepository.revokeAllByUserId(userId);
 
-            // Evict cache
             authCacheService.evictUser(userId);
         } catch (Exception e) {
             log.debug("Error during logout token processing: {}", e.getMessage());
-            // Logout should not fail even if token is invalid
         }
     }
 
     @Override
     public void forgotPassword(ForgotPasswordRequest request) {
-        // Always return success to prevent email enumeration
         userRepository
                 .findByEmail(request.getEmail())
                 .ifPresent(
                         user -> {
-                            // TODO: Generate password reset token and send email
                             log.info("Password reset requested for user: {}", user.getId());
                         });
     }
@@ -246,7 +231,6 @@ public class AuthServiceImpl implements AuthService {
             if (user.getLockUntil() != null && user.getLockUntil().isAfter(Instant.now())) {
                 return true;
             }
-            // Lock expired, reset
             user.setIsLocked(false);
             user.setLockUntil(null);
             user.setFailedAttempts((short) 0);
