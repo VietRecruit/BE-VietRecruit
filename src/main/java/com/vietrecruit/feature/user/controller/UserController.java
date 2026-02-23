@@ -1,9 +1,13 @@
 package com.vietrecruit.feature.user.controller;
 
+import java.util.UUID;
+
 import jakarta.validation.Valid;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,34 +38,44 @@ public class UserController extends BaseController {
 
     private final UserService userService;
 
+    @PreAuthorize("hasAuthority('USER:MANAGE')")
     @PostMapping(ApiConstants.User.CREATE)
-    public ApiResponse<UserResponse> create(@Valid @RequestBody UserRequest request) {
-        return ApiResponse.success(ApiSuccessCode.USER_CREATE_SUCCESS, userService.create(request));
+    public ResponseEntity<ApiResponse<UserResponse>> create(
+            @Valid @RequestBody UserRequest request) {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        ApiSuccessCode.USER_CREATE_SUCCESS, userService.create(request)));
     }
 
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
     @GetMapping(ApiConstants.User.GET)
-    public ApiResponse<UserResponse> get(@PathVariable Integer id) {
-        return ApiResponse.success(ApiSuccessCode.USER_FETCH_SUCCESS, userService.get(id));
+    public ResponseEntity<ApiResponse<UserResponse>> get(@PathVariable UUID id) {
+        return ResponseEntity.ok(
+                ApiResponse.success(ApiSuccessCode.USER_FETCH_SUCCESS, userService.get(id)));
     }
 
+    @PreAuthorize("hasAuthority('USER:MANAGE')")
     @GetMapping
-    public ApiResponse<PageResponse<UserResponse>> list(
+    public ResponseEntity<ApiResponse<PageResponse<UserResponse>>> list(
             @PageableDefault(size = 20) Pageable pageable) {
-        return ApiResponse.success(
-                ApiSuccessCode.USER_LIST_SUCCESS, PageResponse.from(userService.list(pageable)));
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        ApiSuccessCode.USER_LIST_SUCCESS,
+                        PageResponse.from(userService.list(pageable))));
     }
 
     @PutMapping(ApiConstants.User.UPDATE)
-    public ApiResponse<UserResponse> update(
-            @PathVariable Integer id, @Valid @RequestBody UserRequest request) {
-        return ApiResponse.success(
-                ApiSuccessCode.USER_UPDATE_SUCCESS, userService.update(id, request));
+    public ResponseEntity<ApiResponse<UserResponse>> update(
+            @PathVariable UUID id, @Valid @RequestBody UserRequest request) {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        ApiSuccessCode.USER_UPDATE_SUCCESS, userService.update(id, request)));
     }
 
+    @PreAuthorize("hasAuthority('USER:MANAGE')")
     @DeleteMapping(ApiConstants.User.DELETE)
-    public ApiResponse<Void> delete(@PathVariable Integer id) {
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         userService.delete(id);
-        return ApiResponse.success(ApiSuccessCode.USER_DELETE_SUCCESS);
+        return ResponseEntity.ok(ApiResponse.success(ApiSuccessCode.USER_DELETE_SUCCESS));
     }
 }
