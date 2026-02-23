@@ -1,5 +1,7 @@
 package com.vietrecruit.feature.user.service.impl;
 
+import java.util.UUID;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -27,8 +29,8 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponse create(UserRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
-            throw new ApiException(ApiErrorCode.USER_USERNAME_CONFLICT);
+        if (request.getEmail() != null && userRepository.existsByEmail(request.getEmail())) {
+            throw new ApiException(ApiErrorCode.USER_EMAIL_CONFLICT);
         }
         User user = userMapper.toEntity(request);
         user = userRepository.save(user);
@@ -36,10 +38,10 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserResponse get(Integer id) {
+    public UserResponse get(UUID id) {
         User user =
                 userRepository
-                        .findById(id)
+                        .findByIdWithRolesAndPermissions(id)
                         .orElseThrow(() -> new ApiException(ApiErrorCode.NOT_FOUND));
         return userMapper.toResponse(user);
     }
@@ -51,15 +53,16 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserResponse update(Integer id, UserRequest request) {
+    public UserResponse update(UUID id, UserRequest request) {
         User user =
                 userRepository
                         .findById(id)
                         .orElseThrow(() -> new ApiException(ApiErrorCode.NOT_FOUND));
 
-        if (!user.getUsername().equals(request.getUsername())
-                && userRepository.existsByUsername(request.getUsername())) {
-            throw new ApiException(ApiErrorCode.USER_USERNAME_CONFLICT);
+        if (request.getEmail() != null
+                && !user.getEmail().equals(request.getEmail())
+                && userRepository.existsByEmail(request.getEmail())) {
+            throw new ApiException(ApiErrorCode.USER_EMAIL_CONFLICT);
         }
 
         userMapper.updateEntity(user, request);
@@ -69,7 +72,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public void delete(Integer id) {
+    public void delete(UUID id) {
         if (!userRepository.existsById(id)) {
             throw new ApiException(ApiErrorCode.NOT_FOUND);
         }
