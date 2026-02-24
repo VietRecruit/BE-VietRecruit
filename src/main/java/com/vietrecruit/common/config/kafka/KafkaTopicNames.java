@@ -11,5 +11,6 @@ public final class KafkaTopicNames {
     public static final String CDC_USER = "vietrecruit.public.users";
 
     // ========== Application Topics ==========
-    // Add application topics here as needed
+
+    public static final String NOTIFICATION_EMAIL = "notification.email";
 }
