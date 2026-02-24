@@ -33,7 +33,7 @@ public class JwtService {
         this.refreshTokenExpirationMs = refreshTokenExpirationMs;
     }
 
-    public String generateAccessToken(UUID userId, Set<String> roleCodes) {
+    public String generateAccessToken(UUID userId, Set<String> roleCodes, boolean emailVerified) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + accessTokenExpirationMs);
 
@@ -41,6 +41,7 @@ public class JwtService {
                 .id(UUID.randomUUID().toString())
                 .subject(userId.toString())
                 .claim("roles", roleCodes)
+                .claim("email_verified", emailVerified)
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(signingKey, Jwts.SIG.HS512)
@@ -82,6 +83,11 @@ public class JwtService {
             return new java.util.HashSet<>(collection.stream().map(Object::toString).toList());
         }
         return Set.of();
+    }
+
+    public boolean extractEmailVerified(Claims claims) {
+        Boolean verified = claims.get("email_verified", Boolean.class);
+        return Boolean.TRUE.equals(verified);
     }
 
     public long getAccessTokenExpirationMs() {
