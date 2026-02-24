@@ -2,19 +2,19 @@ package com.vietrecruit.common.config.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.vietrecruit.common.security.EmailVerificationFilter;
 import com.vietrecruit.common.security.JwtAuthenticationFilter;
+import com.vietrecruit.common.security.oauth2.CustomOAuth2UserService;
+import com.vietrecruit.common.security.oauth2.OAuth2AuthenticationFailureHandler;
+import com.vietrecruit.common.security.oauth2.OAuth2AuthenticationSuccessHandler;
 
 import lombok.RequiredArgsConstructor;
 
@@ -25,12 +25,22 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final EmailVerificationFilter emailVerificationFilter;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final OAuth2AuthenticationSuccessHandler oAuth2SuccessHandler;
+    private final OAuth2AuthenticationFailureHandler oAuth2FailureHandler;
 
     private static final String[] publicAuthEndpoints = {
         "/vietrecruit/auth/login",
         "/vietrecruit/auth/register",
         "/vietrecruit/auth/refresh",
-        "/vietrecruit/auth/forgot-password"
+        "/vietrecruit/auth/forgot-password",
+        "/vietrecruit/auth/verify-email",
+        "/vietrecruit/auth/resend-verification",
+    };
+
+    private static final String[] publicOAuth2Endpoints = {
+        "/oauth2/**", "/login/oauth2/**",
     };
 
     private static final String[] publicOtherEndpoints = {
@@ -54,6 +64,8 @@ public class SecurityConfig {
                         auth ->
                                 auth.requestMatchers(publicAuthEndpoints)
                                         .permitAll()
+                                        .requestMatchers(publicOAuth2Endpoints)
+                                        .permitAll()
                                         .requestMatchers(publicOtherEndpoints)
                                         .permitAll()
                                         .requestMatchers(clientEndpoints)
@@ -62,20 +74,24 @@ public class SecurityConfig {
                                         .hasAnyAuthority("SYSTEM_ADMIN", "COMPANY_ADMIN")
                                         .anyRequest()
                                         .authenticated())
+                .oauth2Login(
+                        oauth2 ->
+                                oauth2.authorizationEndpoint(
+                                                auth -> auth.baseUri("/oauth2/authorize"))
+                                        .redirectionEndpoint(
+                                                redirect ->
+                                                        redirect.baseUri(
+                                                                "/vietrecruit/auth/oauth2/callback/*"))
+                                        .userInfoEndpoint(
+                                                userInfo ->
+                                                        userInfo.userService(
+                                                                customOAuth2UserService))
+                                        .successHandler(oAuth2SuccessHandler)
+                                        .failureHandler(oAuth2FailureHandler))
                 .addFilterBefore(
-                        jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                        jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(emailVerificationFilter, JwtAuthenticationFilter.class);
 
         return http.build();
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12);
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();
     }
 }

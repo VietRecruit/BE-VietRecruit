@@ -33,7 +33,22 @@ public enum ApiErrorCode {
 
     // User
     USER_USERNAME_CONFLICT("USER_USERNAME_CONFLICT", "Username already exists", HttpStatus.CONFLICT),
-    USER_EMAIL_CONFLICT("USER_EMAIL_CONFLICT", "Email already exists", HttpStatus.CONFLICT);
+    USER_EMAIL_CONFLICT("USER_EMAIL_CONFLICT", "Email already exists", HttpStatus.CONFLICT),
+
+    // Email Verification
+    AUTH_VERIFY_TOKEN_INVALID("AUTH_VERIFY_TOKEN_INVALID", "Verification token is invalid or expired",
+            HttpStatus.BAD_REQUEST),
+    AUTH_EMAIL_NOT_VERIFIED("AUTH_EMAIL_NOT_VERIFIED", "Email address has not been verified",
+            HttpStatus.FORBIDDEN),
+
+    // OAuth2
+    AUTH_OAUTH2_FAILED("AUTH_OAUTH2_FAILED", "OAuth2 authentication failed", HttpStatus.UNAUTHORIZED),
+    AUTH_OAUTH2_EMAIL_MISSING("AUTH_OAUTH2_EMAIL_MISSING", "Email not available from OAuth2 provider",
+            HttpStatus.BAD_REQUEST),
+
+    // Notification
+    NOTIFICATION_SEND_FAILED("NOTIFICATION_SEND_FAILED", "Failed to send notification",
+            HttpStatus.INTERNAL_SERVER_ERROR);
 
     // spotless:on
     private final String code;
