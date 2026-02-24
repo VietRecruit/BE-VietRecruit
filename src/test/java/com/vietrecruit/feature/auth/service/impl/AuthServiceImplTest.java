@@ -27,6 +27,8 @@ import com.vietrecruit.feature.auth.dto.request.RegisterRequest;
 import com.vietrecruit.feature.auth.dto.response.LoginResponse;
 import com.vietrecruit.feature.auth.entity.RefreshToken;
 import com.vietrecruit.feature.auth.repository.RefreshTokenRepository;
+import com.vietrecruit.feature.notification.dto.EmailRequest;
+import com.vietrecruit.feature.notification.service.NotificationService;
 import com.vietrecruit.feature.user.entity.Permission;
 import com.vietrecruit.feature.user.entity.Role;
 import com.vietrecruit.feature.user.entity.User;
@@ -47,6 +49,8 @@ class AuthServiceImplTest {
     @Mock private JwtService jwtService;
 
     @Mock private AuthCacheService authCacheService;
+
+    @Mock private NotificationService notificationService;
 
     @InjectMocks private AuthServiceImpl authService;
 
@@ -186,5 +190,7 @@ class AuthServiceImplTest {
         assertEquals("hashed-new-pwd", savedUser.getPasswordHash());
         assertEquals("New User", savedUser.getFullName());
         assertTrue(savedUser.getRoles().contains(testRole));
+
+        verify(notificationService, times(1)).send(any(EmailRequest.class));
     }
 }

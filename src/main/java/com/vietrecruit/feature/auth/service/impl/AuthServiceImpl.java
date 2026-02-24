@@ -5,6 +5,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -25,6 +27,9 @@ import com.vietrecruit.feature.auth.dto.response.TokenRefreshResponse;
 import com.vietrecruit.feature.auth.entity.RefreshToken;
 import com.vietrecruit.feature.auth.repository.RefreshTokenRepository;
 import com.vietrecruit.feature.auth.service.AuthService;
+import com.vietrecruit.feature.notification.dto.EmailRequest;
+import com.vietrecruit.feature.notification.dto.EmailSenderAlias;
+import com.vietrecruit.feature.notification.service.NotificationService;
 import com.vietrecruit.feature.user.entity.Permission;
 import com.vietrecruit.feature.user.entity.Role;
 import com.vietrecruit.feature.user.entity.User;
@@ -51,6 +56,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthCacheService authCacheService;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -140,6 +146,17 @@ public class AuthServiceImpl implements AuthService {
         user.getRoles().add(defaultRole);
 
         userRepository.save(user);
+
+        notificationService.send(
+                new EmailRequest(
+                        List.of(user.getEmail()),
+                        EmailSenderAlias.AUTHENTICATION,
+                        "Welcome to VietRecruit",
+                        null,
+                        "welcome",
+                        Map.of(
+                                "heading", "Welcome!",
+                                "message", "Your account has been successfully created.")));
     }
 
     @Override
@@ -223,6 +240,17 @@ public class AuthServiceImpl implements AuthService {
                 .ifPresent(
                         user -> {
                             log.info("Password reset requested for user: {}", user.getId());
+                            String resetLink =
+                                    "https://vietrecruit.site/reset-password?token=placeholder";
+
+                            notificationService.send(
+                                    new EmailRequest(
+                                            List.of(user.getEmail()),
+                                            EmailSenderAlias.AUTHENTICATION,
+                                            "Password Reset Request",
+                                            null,
+                                            "forgot-password",
+                                            Map.of("resetLink", resetLink)));
                         });
     }
 
