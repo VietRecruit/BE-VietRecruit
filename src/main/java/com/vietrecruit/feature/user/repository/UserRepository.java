@@ -23,4 +23,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
                     + "LEFT JOIN FETCH r.permissions "
                     + "WHERE u.id = :id")
     Optional<User> findByIdWithRolesAndPermissions(@Param("id") UUID id);
+
+    @Query("SELECT u.emailVerified FROM User u WHERE u.id = :id")
+    Boolean findEmailVerifiedById(@Param("id") UUID id);
 }

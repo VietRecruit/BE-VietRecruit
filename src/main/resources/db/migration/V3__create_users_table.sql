@@ -2,7 +2,7 @@ CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID REFERENCES companies(id),
     email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255),
     full_name VARCHAR(255) NOT NULL,
     phone VARCHAR(50),
     avatar_url VARCHAR(255),
@@ -13,6 +13,8 @@ CREATE TABLE users (
     dob DATE,
     gender VARCHAR(20),
     role user_role DEFAULT 'CANDIDATE',
+    email_verified BOOLEAN DEFAULT FALSE,
+    email_verified_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP WITH TIME ZONE
@@ -20,3 +22,4 @@ CREATE TABLE users (
 
 CREATE INDEX idx_users_company_id ON users(company_id);
 CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_email_verified ON users(id) WHERE email_verified = FALSE;

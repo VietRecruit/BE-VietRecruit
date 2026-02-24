@@ -45,7 +45,7 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(name = "password_hash", nullable = false)
+    @Column(name = "password_hash")
     private String passwordHash;
 
     @Column(name = "full_name", nullable = false)
@@ -72,6 +72,13 @@ public class User {
 
     @Column(length = 20)
     private String gender;
+
+    @Builder.Default
+    @Column(name = "email_verified")
+    private Boolean emailVerified = false;
+
+    @Column(name = "email_verified_at")
+    private Instant emailVerifiedAt;
 
     @Builder.Default
     @Column(name = "is_active")
