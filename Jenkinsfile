@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_REPO = "nguyenminh1301/Vietrecruit"
+        DOCKER_REPO = "nguyenminh1301/vietrecruit"
         DEPLOY_DIR = "/opt/vietrecruit"
     }
 
