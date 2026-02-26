@@ -137,6 +137,26 @@ services:
         limits:
           memory: 1G
 
+  kafka-ui:
+    container_name: vr-kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - 8090:8080
+    networks:
+      - vr-network
+    environment:
+      DYNAMIC_CONFIG_ENABLED: "true"
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: vr-kafka:9092
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: debezium
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://vr-debezium-connect:8083
+      AUTH_TYPE: LOGIN_FORM
+      SPRING_SECURITY_USER_NAME: ${KAFKA_UI_USERNAME}
+      SPRING_SECURITY_USER_PASSWORD: ${KAFKA_UI_PASSWORD}
+    depends_on:
+      - kafka
+      - debezium-kafka-connect
+
   debezium-kafka-connect:
     image: debezium/connect:2.5
     container_name: vr-debezium-connect
