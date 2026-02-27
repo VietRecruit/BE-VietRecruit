@@ -44,9 +44,10 @@ public class SecurityConfig {
     };
 
     private static final String[] publicOtherEndpoints = {
-        "/v3/api-docs/**",
-        "/swagger-ui.html",
-        "/swagger-ui/**",
+        "/vietrecruit/v3/api-docs/**",
+        "/vietrecruit/api-docs/**",
+        "/vietrecruit/swagger-ui.html",
+        "/vietrecruit/swagger-ui/**",
         "/actuator/**",
         "/actuator/prometheus",
         "/health/**"
