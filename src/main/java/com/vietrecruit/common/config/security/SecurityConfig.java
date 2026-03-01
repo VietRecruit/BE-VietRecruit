@@ -38,8 +38,8 @@ public class SecurityConfig {
         "/vietrecruit/auth/register",
         "/vietrecruit/auth/refresh",
         "/vietrecruit/auth/forgot-password",
-        "/vietrecruit/auth/verify-email",
-        "/vietrecruit/auth/resend-verification",
+        "/vietrecruit/auth/verify-otp",
+        "/vietrecruit/auth/resend-otp",
     };
 
     private static final String[] publicOAuth2Endpoints = {

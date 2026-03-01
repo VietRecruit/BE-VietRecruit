@@ -1,5 +1,6 @@
 package com.vietrecruit.common.security;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -17,7 +18,13 @@ public class AuthCacheService {
     private static final String BLACKLIST_KEY_PREFIX = "blacklist:";
     private static final long PERMISSIONS_TTL_MINUTES = 30;
 
+    private static final String OTP_KEY_PREFIX = "auth:verify:otp:";
+    private static final String OTP_COOLDOWN_PREFIX = "auth:verify:cooldown:";
+    private static final String OTP_LOCKOUT_PREFIX = "auth:verify:lockout:";
+
     private final StringRedisTemplate redisTemplate;
+
+    // ── Permission Cache ────────────────────────────────────────────────
 
     public void cachePermissions(UUID userId, Set<String> permissions) {
         String key = String.format(PERMISSIONS_KEY_PREFIX, userId);
@@ -42,6 +49,8 @@ public class AuthCacheService {
         redisTemplate.delete(permissionsKey);
     }
 
+    // ── Token Blacklist ─────────────────────────────────────────────────
+
     public void blacklistToken(String jti, long remainingTtlSeconds) {
         if (remainingTtlSeconds > 0) {
             String key = BLACKLIST_KEY_PREFIX + jti;
@@ -54,21 +63,64 @@ public class AuthCacheService {
         return Boolean.TRUE.equals(redisTemplate.hasKey(key));
     }
 
-    private static final String VERIFY_TOKEN_PREFIX = "verify:token:";
+    // ── OTP Verification ────────────────────────────────────────────────
 
-    public void storeVerificationToken(String tokenHash, UUID userId, long ttlSeconds) {
-        String key = VERIFY_TOKEN_PREFIX + tokenHash;
-        redisTemplate.opsForValue().set(key, userId.toString(), ttlSeconds, TimeUnit.SECONDS);
+    public void storeOtp(String email, String code, UUID userId, long ttlSeconds) {
+        String key = OTP_KEY_PREFIX + email.toLowerCase();
+        Map<String, String> fields =
+                Map.of("code", code, "userId", userId.toString(), "attempts", "0");
+        redisTemplate.opsForHash().putAll(key, fields);
+        redisTemplate.expire(key, ttlSeconds, TimeUnit.SECONDS);
     }
 
-    public UUID getVerificationToken(String tokenHash) {
-        String key = VERIFY_TOKEN_PREFIX + tokenHash;
-        String value = redisTemplate.opsForValue().get(key);
-        return value != null ? UUID.fromString(value) : null;
+    public OtpContext getOtpContext(String email) {
+        String key = OTP_KEY_PREFIX + email.toLowerCase();
+        Map<Object, Object> entries = redisTemplate.opsForHash().entries(key);
+        if (entries.isEmpty()) {
+            return null;
+        }
+        return new OtpContext(
+                (String) entries.get("code"),
+                UUID.fromString((String) entries.get("userId")),
+                Integer.parseInt((String) entries.get("attempts")));
     }
 
-    public void deleteVerificationToken(String tokenHash) {
-        String key = VERIFY_TOKEN_PREFIX + tokenHash;
+    public int incrementAttempts(String email) {
+        String key = OTP_KEY_PREFIX + email.toLowerCase();
+        Long newVal = redisTemplate.opsForHash().increment(key, "attempts", 1);
+        return newVal != null ? newVal.intValue() : 1;
+    }
+
+    public void deleteOtp(String email) {
+        String key = OTP_KEY_PREFIX + email.toLowerCase();
         redisTemplate.delete(key);
     }
+
+    // ── OTP Lockout ─────────────────────────────────────────────────────
+
+    public void setLockout(String email, long ttlSeconds) {
+        String key = OTP_LOCKOUT_PREFIX + email.toLowerCase();
+        redisTemplate.opsForValue().set(key, "1", ttlSeconds, TimeUnit.SECONDS);
+    }
+
+    public boolean isLockedOut(String email) {
+        String key = OTP_LOCKOUT_PREFIX + email.toLowerCase();
+        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+    }
+
+    // ── OTP Cooldown ────────────────────────────────────────────────────
+
+    public void setCooldown(String email, long ttlSeconds) {
+        String key = OTP_COOLDOWN_PREFIX + email.toLowerCase();
+        redisTemplate.opsForValue().set(key, "1", ttlSeconds, TimeUnit.SECONDS);
+    }
+
+    public boolean isOnCooldown(String email) {
+        String key = OTP_COOLDOWN_PREFIX + email.toLowerCase();
+        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+    }
+
+    // ── OTP Context Record ──────────────────────────────────────────────
+
+    public record OtpContext(String code, UUID userId, int attempts) {}
 }

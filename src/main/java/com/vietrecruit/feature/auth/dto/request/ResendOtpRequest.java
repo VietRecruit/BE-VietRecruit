@@ -13,11 +13,11 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Payload for resending verification email")
-public class ResendVerificationRequest {
+@Schema(description = "Payload for resending verification code")
+public class ResendOtpRequest {
 
     @Schema(
-            description = "User's email address to resend the verification to",
+            description = "User's email address to resend the verification code to",
             example = "user@example.com",
             requiredMode = Schema.RequiredMode.REQUIRED)
     @Email
