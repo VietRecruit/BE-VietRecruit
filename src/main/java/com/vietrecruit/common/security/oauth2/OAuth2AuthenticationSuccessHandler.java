@@ -45,12 +45,18 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         String providerUserId = extractProviderUserId(oAuth2User, registrationId);
         String name = extractName(oAuth2User);
         String avatarUrl = extractAvatarUrl(oAuth2User, registrationId);
+        Boolean emailVerified = extractEmailVerified(oAuth2User, registrationId);
 
         log.info("OAuth2 login success: provider={}, email={}", registrationId, email);
 
         LoginResponse loginResponse =
                 authService.processOAuth2Login(
-                        registrationId.toUpperCase(), email, providerUserId, name, avatarUrl);
+                        registrationId.toUpperCase(),
+                        email,
+                        providerUserId,
+                        name,
+                        avatarUrl,
+                        emailVerified);
 
         String redirectUrl =
                 String.format(
@@ -93,5 +99,14 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
             return oAuth2User.getAttribute("picture");
         }
         return oAuth2User.getAttribute("avatar_url");
+    }
+
+    private Boolean extractEmailVerified(OAuth2User oAuth2User, String registrationId) {
+        if ("google".equals(registrationId)) {
+            Boolean verified = oAuth2User.getAttribute("email_verified");
+            return Boolean.TRUE.equals(verified);
+        }
+        // GitHub does not guarantee email verification in OAuth2 claims
+        return false;
     }
 }

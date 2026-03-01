@@ -1,14 +1,10 @@
 package com.vietrecruit.feature.auth.service.impl;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.Instant;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -23,8 +19,9 @@ import com.vietrecruit.common.security.JwtService;
 import com.vietrecruit.feature.auth.dto.request.ForgotPasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.LoginRequest;
 import com.vietrecruit.feature.auth.dto.request.RegisterRequest;
-import com.vietrecruit.feature.auth.dto.request.ResendVerificationRequest;
+import com.vietrecruit.feature.auth.dto.request.ResendOtpRequest;
 import com.vietrecruit.feature.auth.dto.request.TokenRefreshRequest;
+import com.vietrecruit.feature.auth.dto.request.VerifyOtpRequest;
 import com.vietrecruit.feature.auth.dto.response.LoginResponse;
 import com.vietrecruit.feature.auth.dto.response.TokenRefreshResponse;
 import com.vietrecruit.feature.auth.entity.RefreshToken;
@@ -54,7 +51,12 @@ public class AuthServiceImpl implements AuthService {
     private static final String DEFAULT_ROLE = "CANDIDATE";
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final long LOCK_DURATION_MINUTES = 30;
-    private static final long VERIFICATION_TOKEN_TTL_SECONDS = 900;
+    private static final long OTP_TTL_SECONDS = 600;
+    private static final long OTP_COOLDOWN_SECONDS = 60;
+    private static final long OTP_LOCKOUT_SECONDS = 1800;
+    private static final int MAX_OTP_ATTEMPTS = 5;
+    private static final int OTP_BOUND_MIN = 10_000_000;
+    private static final int OTP_BOUND_MAX = 100_000_000;
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -64,6 +66,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final AuthCacheService authCacheService;
     private final NotificationService notificationService;
+    private final SecureRandom secureRandom = new SecureRandom();
 
     @Value("${spring.application.frontend-url}")
     private String frontendBaseUrl;
@@ -130,12 +133,9 @@ public class AuthServiceImpl implements AuthService {
 
         userRepository.save(user);
 
-        String rawToken = UUID.randomUUID().toString();
-        String tokenHash = sha256(rawToken);
-        authCacheService.storeVerificationToken(
-                tokenHash, user.getId(), VERIFICATION_TOKEN_TTL_SECONDS);
-
-        String verifyLink = String.format("%s/verify-email?token=%s", frontendBaseUrl, rawToken);
+        String otpCode = generateOtp();
+        authCacheService.storeOtp(request.getEmail(), otpCode, user.getId(), OTP_TTL_SECONDS);
+        authCacheService.setCooldown(request.getEmail(), OTP_COOLDOWN_SECONDS);
 
         notificationService.send(
                 new EmailRequest(
@@ -144,48 +144,67 @@ public class AuthServiceImpl implements AuthService {
                         "Verify Your Email Address",
                         null,
                         "email-verification",
-                        Map.of("verifyLink", verifyLink, "fullName", user.getFullName())));
+                        Map.of("otpCode", otpCode, "fullName", user.getFullName())));
     }
 
     @Override
     @Transactional
-    public void verifyEmail(String token) {
-        String tokenHash = sha256(token);
-        UUID userId = authCacheService.getVerificationToken(tokenHash);
+    public void verifyOtp(VerifyOtpRequest request) {
+        String email = request.getEmail();
 
-        if (userId == null) {
-            throw new ApiException(ApiErrorCode.AUTH_VERIFY_TOKEN_INVALID);
+        if (authCacheService.isLockedOut(email)) {
+            throw new ApiException(ApiErrorCode.AUTH_OTP_LOCKED);
+        }
+
+        AuthCacheService.OtpContext context = authCacheService.getOtpContext(email);
+        if (context == null) {
+            throw new ApiException(ApiErrorCode.AUTH_OTP_EXPIRED);
+        }
+
+        if (!context.code().equals(request.getCode())) {
+            int attempts = authCacheService.incrementAttempts(email);
+            if (attempts >= MAX_OTP_ATTEMPTS) {
+                authCacheService.deleteOtp(email);
+                authCacheService.setLockout(email, OTP_LOCKOUT_SECONDS);
+                throw new ApiException(ApiErrorCode.AUTH_OTP_LOCKED);
+            }
+            throw new ApiException(ApiErrorCode.AUTH_OTP_INVALID);
         }
 
         User user =
                 userRepository
-                        .findById(userId)
-                        .orElseThrow(
-                                () -> new ApiException(ApiErrorCode.AUTH_VERIFY_TOKEN_INVALID));
+                        .findById(context.userId())
+                        .orElseThrow(() -> new ApiException(ApiErrorCode.AUTH_OTP_EXPIRED));
 
         user.setEmailVerified(true);
         user.setEmailVerifiedAt(Instant.now());
         userRepository.save(user);
 
-        authCacheService.deleteVerificationToken(tokenHash);
+        authCacheService.deleteOtp(email);
     }
 
     @Override
     @Transactional
-    public void resendVerification(ResendVerificationRequest request) {
+    public void resendOtp(ResendOtpRequest request) {
+        String email = request.getEmail();
+
+        if (authCacheService.isOnCooldown(email)) {
+            throw new ApiException(ApiErrorCode.AUTH_OTP_COOLDOWN);
+        }
+
+        if (authCacheService.isLockedOut(email)) {
+            throw new ApiException(ApiErrorCode.AUTH_OTP_LOCKED);
+        }
+
         userRepository
-                .findByEmail(request.getEmail())
+                .findByEmail(email)
                 .filter(user -> Boolean.FALSE.equals(user.getEmailVerified()))
                 .ifPresent(
                         user -> {
-                            String rawToken = UUID.randomUUID().toString();
-                            String tokenHash = sha256(rawToken);
-                            authCacheService.storeVerificationToken(
-                                    tokenHash, user.getId(), VERIFICATION_TOKEN_TTL_SECONDS);
-
-                            String verifyLink =
-                                    String.format(
-                                            "%s/verify-email?token=%s", frontendBaseUrl, rawToken);
+                            String otpCode = generateOtp();
+                            authCacheService.storeOtp(
+                                    email, otpCode, user.getId(), OTP_TTL_SECONDS);
+                            authCacheService.setCooldown(email, OTP_COOLDOWN_SECONDS);
 
                             notificationService.send(
                                     new EmailRequest(
@@ -195,8 +214,8 @@ public class AuthServiceImpl implements AuthService {
                                             null,
                                             "email-verification",
                                             Map.of(
-                                                    "verifyLink",
-                                                    verifyLink,
+                                                    "otpCode",
+                                                    otpCode,
                                                     "fullName",
                                                     user.getFullName())));
                         });
@@ -209,7 +228,8 @@ public class AuthServiceImpl implements AuthService {
             String email,
             String providerUserId,
             String providerName,
-            String providerAvatarUrl) {
+            String providerAvatarUrl,
+            Boolean providerEmailVerified) {
 
         User user =
                 userRepository
@@ -241,7 +261,8 @@ public class AuthServiceImpl implements AuthService {
                                                                         .build());
                                                     });
 
-                                    if (Boolean.FALSE.equals(existingUser.getEmailVerified())) {
+                                    if (Boolean.FALSE.equals(existingUser.getEmailVerified())
+                                            && Boolean.TRUE.equals(providerEmailVerified)) {
                                         existingUser.setEmailVerified(true);
                                         existingUser.setEmailVerifiedAt(Instant.now());
                                     }
@@ -261,6 +282,8 @@ public class AuthServiceImpl implements AuthService {
                                                                             "Default role not"
                                                                                     + " found"));
 
+                                    boolean verified = Boolean.TRUE.equals(providerEmailVerified);
+
                                     User newUser =
                                             User.builder()
                                                     .email(email)
@@ -268,8 +291,9 @@ public class AuthServiceImpl implements AuthService {
                                                             providerName != null
                                                                     ? providerName
                                                                     : email.split("@")[0])
-                                                    .emailVerified(true)
-                                                    .emailVerifiedAt(Instant.now())
+                                                    .emailVerified(verified)
+                                                    .emailVerifiedAt(
+                                                            verified ? Instant.now() : null)
                                                     .lastLoginAt(Instant.now())
                                                     .build();
                                     newUser.getRoles().add(defaultRole);
@@ -452,12 +476,17 @@ public class AuthServiceImpl implements AuthService {
         userRepository.save(user);
     }
 
+    private String generateOtp() {
+        int code = secureRandom.nextInt(OTP_BOUND_MIN, OTP_BOUND_MAX);
+        return String.valueOf(code);
+    }
+
     private String sha256(String input) {
         try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(hash);
-        } catch (NoSuchAlgorithmException e) {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(input.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(hash);
+        } catch (java.security.NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256 algorithm not available", e);
         }
     }

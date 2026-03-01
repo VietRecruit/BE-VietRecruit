@@ -3,8 +3,9 @@ package com.vietrecruit.feature.auth.service;
 import com.vietrecruit.feature.auth.dto.request.ForgotPasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.LoginRequest;
 import com.vietrecruit.feature.auth.dto.request.RegisterRequest;
-import com.vietrecruit.feature.auth.dto.request.ResendVerificationRequest;
+import com.vietrecruit.feature.auth.dto.request.ResendOtpRequest;
 import com.vietrecruit.feature.auth.dto.request.TokenRefreshRequest;
+import com.vietrecruit.feature.auth.dto.request.VerifyOtpRequest;
 import com.vietrecruit.feature.auth.dto.response.LoginResponse;
 import com.vietrecruit.feature.auth.dto.response.TokenRefreshResponse;
 
@@ -20,14 +21,15 @@ public interface AuthService {
 
     void forgotPassword(ForgotPasswordRequest request);
 
-    void verifyEmail(String token);
+    void verifyOtp(VerifyOtpRequest request);
 
-    void resendVerification(ResendVerificationRequest request);
+    void resendOtp(ResendOtpRequest request);
 
     LoginResponse processOAuth2Login(
             String provider,
             String email,
             String providerUserId,
             String providerName,
-            String providerAvatarUrl);
+            String providerAvatarUrl,
+            Boolean providerEmailVerified);
 }
