@@ -15,8 +15,8 @@ public final class ApiConstants {
         public static final String REFRESH = "/refresh";
         public static final String LOGOUT = "/logout";
         public static final String FORGOT_PASSWORD = "/forgot-password";
-        public static final String VERIFY_EMAIL = "/verify-email";
-        public static final String RESEND_VERIFICATION = "/resend-verification";
+        public static final String VERIFY_OTP = "/verify-otp";
+        public static final String RESEND_OTP = "/resend-otp";
         public static final String OAUTH2_CALLBACK = "/oauth2/callback/*";
     }
 
