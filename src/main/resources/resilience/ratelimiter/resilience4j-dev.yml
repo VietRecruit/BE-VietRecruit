@@ -14,6 +14,18 @@ resilience4j:
         timeoutDuration: 5s
         registerHealthIndicator: true
 
+      # OTP
+      otpSend:
+        limitForPeriod: 5
+        limitRefreshPeriod: 300s
+        timeoutDuration: 0
+        registerHealthIndicator: true
+      otpVerify:
+        limitForPeriod: 15
+        limitRefreshPeriod: 60s
+        timeoutDuration: 0
+        registerHealthIndicator: true
+
       # OpenAPI
       swagger:
         limitForPeriod: 100
