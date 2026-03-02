@@ -16,7 +16,9 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -46,6 +48,7 @@ public class EmployerSubscription {
 
     @Builder.Default
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false)
     private SubscriptionStatus status = SubscriptionStatus.ACTIVE;
 
@@ -64,6 +67,12 @@ public class EmployerSubscription {
 
     @Column(name = "payment_ref")
     private String paymentRef;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "billing_cycle")
+    private BillingCycle billingCycle = BillingCycle.MONTHLY;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
