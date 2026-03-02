@@ -94,15 +94,18 @@ class SubscriptionServiceImplTest {
     }
 
     @Test
-    @DisplayName("Should subscribe successfully")
-    void subscribe_Success() {
-        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+    @DisplayName("Should activate subscription successfully")
+    void activateSubscription_Success() {
         when(subscriptionRepository.saveAndFlush(any(EmployerSubscription.class)))
                 .thenReturn(subscription);
         when(mapper.toSubscriptionResponse(any(EmployerSubscription.class)))
                 .thenReturn(subscriptionResponse);
 
-        var result = subscriptionService.subscribe(companyId, planId);
+        var result =
+                subscriptionService.activateSubscription(
+                        companyId,
+                        plan,
+                        com.vietrecruit.feature.subscription.entity.BillingCycle.MONTHLY);
 
         assertNotNull(result);
         assertEquals("BASIC", result.getPlanCode());
@@ -110,28 +113,21 @@ class SubscriptionServiceImplTest {
     }
 
     @Test
-    @DisplayName("Should throw when subscribing with already active subscription")
-    void subscribe_AlreadyActive() {
-        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+    @DisplayName("Should throw when activating an already active subscription")
+    void activateSubscription_AlreadyActive() {
         when(subscriptionRepository.saveAndFlush(any(EmployerSubscription.class)))
                 .thenThrow(new DataIntegrityViolationException("unique constraint"));
 
         var ex =
                 assertThrows(
-                        ApiException.class, () -> subscriptionService.subscribe(companyId, planId));
+                        ApiException.class,
+                        () ->
+                                subscriptionService.activateSubscription(
+                                        companyId,
+                                        plan,
+                                        com.vietrecruit.feature.subscription.entity.BillingCycle
+                                                .MONTHLY));
         assertEquals(ApiErrorCode.SUBSCRIPTION_ALREADY_ACTIVE, ex.getErrorCode());
-    }
-
-    @Test
-    @DisplayName("Should throw when subscribing to inactive plan")
-    void subscribe_InactivePlan() {
-        plan.setIsActive(false);
-        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
-
-        var ex =
-                assertThrows(
-                        ApiException.class, () -> subscriptionService.subscribe(companyId, planId));
-        assertEquals(ApiErrorCode.PLAN_NOT_FOUND, ex.getErrorCode());
     }
 
     @Test

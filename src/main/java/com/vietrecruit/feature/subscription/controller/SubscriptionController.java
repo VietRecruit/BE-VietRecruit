@@ -2,15 +2,10 @@ package com.vietrecruit.feature.subscription.controller;
 
 import java.util.UUID;
 
-import jakarta.validation.Valid;
-
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -21,7 +16,6 @@ import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.common.response.ApiResponse;
 import com.vietrecruit.common.response.ApiSuccessCode;
 import com.vietrecruit.common.security.SecurityUtils;
-import com.vietrecruit.feature.subscription.dto.request.SubscribeRequest;
 import com.vietrecruit.feature.subscription.dto.response.QuotaResponse;
 import com.vietrecruit.feature.subscription.dto.response.SubscriptionResponse;
 import com.vietrecruit.feature.subscription.service.SubscriptionService;
@@ -41,24 +35,6 @@ public class SubscriptionController extends BaseController {
 
     private final SubscriptionService subscriptionService;
     private final UserRepository userRepository;
-
-    @Operation(
-            summary = "Subscribe",
-            description = "Subscribes the current user's company to a plan")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "201",
-            description = "Subscription activated successfully")
-    @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
-    @PostMapping
-    public ResponseEntity<ApiResponse<SubscriptionResponse>> subscribe(
-            @Valid @RequestBody SubscribeRequest request) {
-        var companyId = resolveCompanyId();
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(
-                        ApiResponse.success(
-                                ApiSuccessCode.SUBSCRIPTION_CREATE_SUCCESS,
-                                subscriptionService.subscribe(companyId, request.getPlanId())));
-    }
 
     @Operation(
             summary = "Get Current Subscription",
