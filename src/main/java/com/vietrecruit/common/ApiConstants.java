@@ -53,4 +53,19 @@ public final class ApiConstants {
         public static final String CANCEL = "/current/cancel";
         public static final String QUOTA = "/current/quota";
     }
+
+    public static final class Payment {
+        private Payment() {}
+
+        public static final String ROOT = API_VERSION + "/payment";
+        public static final String CHECKOUT = "/checkout";
+        public static final String PAYMENT_STATUS = "/payment-status/{orderCode}";
+    }
+
+    public static final class Webhook {
+        private Webhook() {}
+
+        public static final String ROOT = API_VERSION + "/webhooks";
+        public static final String PAYOS = "/payos";
+    }
 }
