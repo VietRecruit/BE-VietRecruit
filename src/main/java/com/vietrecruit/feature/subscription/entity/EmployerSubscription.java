@@ -52,7 +52,7 @@ public class EmployerSubscription {
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "subscription_status")
     private SubscriptionStatus status = SubscriptionStatus.ACTIVE;
 
     @Column(name = "started_at", nullable = false)
@@ -74,7 +74,7 @@ public class EmployerSubscription {
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "billing_cycle")
+    @Column(name = "billing_cycle", columnDefinition = "billing_cycle")
     private BillingCycle billingCycle = BillingCycle.MONTHLY;
 
     @CreationTimestamp
