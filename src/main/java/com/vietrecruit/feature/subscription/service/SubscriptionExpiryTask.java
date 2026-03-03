@@ -6,7 +6,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.vietrecruit.feature.subscription.entity.SubscriptionStatus;
+import com.vietrecruit.feature.subscription.enums.SubscriptionStatus;
 import com.vietrecruit.feature.subscription.repository.EmployerSubscriptionRepository;
 
 import lombok.RequiredArgsConstructor;

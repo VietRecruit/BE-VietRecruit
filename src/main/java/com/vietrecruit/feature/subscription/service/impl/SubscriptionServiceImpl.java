@@ -8,15 +8,15 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.vietrecruit.common.exception.ApiErrorCode;
+import com.vietrecruit.common.enums.ApiErrorCode;
+import com.vietrecruit.common.enums.BillingCycle;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.subscription.dto.response.QuotaResponse;
 import com.vietrecruit.feature.subscription.dto.response.SubscriptionResponse;
-import com.vietrecruit.feature.subscription.entity.BillingCycle;
 import com.vietrecruit.feature.subscription.entity.EmployerSubscription;
 import com.vietrecruit.feature.subscription.entity.JobPostingQuota;
 import com.vietrecruit.feature.subscription.entity.SubscriptionPlan;
-import com.vietrecruit.feature.subscription.entity.SubscriptionStatus;
+import com.vietrecruit.feature.subscription.enums.SubscriptionStatus;
 import com.vietrecruit.feature.subscription.mapper.SubscriptionMapper;
 import com.vietrecruit.feature.subscription.repository.EmployerSubscriptionRepository;
 import com.vietrecruit.feature.subscription.repository.JobPostingQuotaRepository;
