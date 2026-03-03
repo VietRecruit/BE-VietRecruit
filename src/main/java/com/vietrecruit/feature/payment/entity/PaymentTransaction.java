@@ -57,7 +57,7 @@ public class PaymentTransaction {
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "billing_cycle", nullable = false)
+    @Column(name = "billing_cycle", nullable = false, columnDefinition = "billing_cycle")
     private BillingCycle billingCycle = BillingCycle.MONTHLY;
 
     @Column(nullable = false)
@@ -66,7 +66,7 @@ public class PaymentTransaction {
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "payment_status")
     private PaymentStatus status = PaymentStatus.PENDING;
 
     @Column(name = "checkout_url", columnDefinition = "TEXT")

@@ -23,29 +23,34 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
     @Query(
             """
 			SELECT pt FROM PaymentTransaction pt
-			WHERE pt.status = 'PENDING'
+			WHERE pt.status = :status
 			AND pt.createdAt < :cutoff
 			""")
-    List<PaymentTransaction> findExpiredPending(@Param("cutoff") Instant cutoff);
+    List<PaymentTransaction> findExpiredPending(
+            @Param("cutoff") Instant cutoff, @Param("status") PaymentStatus status);
 
     @Query(
             """
 			SELECT pt FROM PaymentTransaction pt
-			WHERE pt.status = 'PENDING'
+			WHERE pt.status = :status
 			AND pt.createdAt < :cutoff
 			AND pt.createdAt > :lowerBound
 			""")
     List<PaymentTransaction> findStalePending(
-            @Param("cutoff") Instant cutoff, @Param("lowerBound") Instant lowerBound);
+            @Param("cutoff") Instant cutoff,
+            @Param("lowerBound") Instant lowerBound,
+            @Param("status") PaymentStatus status);
 
     @Query(
-            """
-			SELECT pt FROM PaymentTransaction pt
-			WHERE pt.status = com.vietrecruit.feature.payment.enums.PaymentStatus.PAID
-			AND pt.companyId NOT IN (
-				SELECT es.companyId FROM EmployerSubscription es
-				WHERE es.status = com.vietrecruit.feature.subscription.enums.SubscriptionStatus.ACTIVE
+            value =
+                    """
+			SELECT pt.* FROM payment_transactions pt
+			WHERE pt.status = 'PAID'
+			AND pt.company_id NOT IN (
+				SELECT es.company_id FROM employer_subscriptions es
+				WHERE es.status = 'ACTIVE'
 			)
-			""")
+			""",
+            nativeQuery = true)
     List<PaymentTransaction> findPaidWithoutActiveSubscription();
 }
