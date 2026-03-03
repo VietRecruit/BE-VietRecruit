@@ -26,7 +26,7 @@ import com.vietrecruit.feature.subscription.dto.response.SubscriptionResponse;
 import com.vietrecruit.feature.subscription.entity.EmployerSubscription;
 import com.vietrecruit.feature.subscription.entity.JobPostingQuota;
 import com.vietrecruit.feature.subscription.entity.SubscriptionPlan;
-import com.vietrecruit.feature.subscription.entity.SubscriptionStatus;
+import com.vietrecruit.feature.subscription.enums.SubscriptionStatus;
 import com.vietrecruit.feature.subscription.mapper.SubscriptionMapper;
 import com.vietrecruit.feature.subscription.repository.EmployerSubscriptionRepository;
 import com.vietrecruit.feature.subscription.repository.JobPostingQuotaRepository;
@@ -133,7 +133,7 @@ class SubscriptionServiceImplTest {
     @Test
     @DisplayName("Should get current subscription")
     void getCurrentSubscription_Success() {
-        when(subscriptionRepository.findActiveByCompanyId(companyId))
+        when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(subscription));
         when(mapper.toSubscriptionResponse(subscription)).thenReturn(subscriptionResponse);
 
@@ -145,7 +145,8 @@ class SubscriptionServiceImplTest {
     @Test
     @DisplayName("Should throw when no active subscription for getCurrentSubscription")
     void getCurrentSubscription_NotFound() {
-        when(subscriptionRepository.findActiveByCompanyId(companyId)).thenReturn(Optional.empty());
+        when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
+                .thenReturn(Optional.empty());
 
         var ex =
                 assertThrows(
@@ -157,7 +158,7 @@ class SubscriptionServiceImplTest {
     @Test
     @DisplayName("Should get current quota")
     void getCurrentQuota_Success() {
-        when(subscriptionRepository.findActiveByCompanyId(companyId))
+        when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(subscription));
         when(quotaRepository.findBySubscriptionId(subscription.getId()))
                 .thenReturn(Optional.of(quota));
@@ -172,7 +173,7 @@ class SubscriptionServiceImplTest {
     @Test
     @DisplayName("Should cancel subscription")
     void cancelSubscription_Success() {
-        when(subscriptionRepository.findActiveByCompanyId(companyId))
+        when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(subscription));
         when(subscriptionRepository.save(any(EmployerSubscription.class))).thenReturn(subscription);
 

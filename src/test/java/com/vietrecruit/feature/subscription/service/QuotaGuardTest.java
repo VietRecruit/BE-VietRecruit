@@ -16,12 +16,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.vietrecruit.common.exception.ApiErrorCode;
+import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.subscription.entity.EmployerSubscription;
 import com.vietrecruit.feature.subscription.entity.JobPostingQuota;
 import com.vietrecruit.feature.subscription.entity.SubscriptionPlan;
-import com.vietrecruit.feature.subscription.entity.SubscriptionStatus;
+import com.vietrecruit.feature.subscription.enums.SubscriptionStatus;
 import com.vietrecruit.feature.subscription.repository.EmployerSubscriptionRepository;
 import com.vietrecruit.feature.subscription.repository.JobPostingQuotaRepository;
 
@@ -70,7 +70,7 @@ class QuotaGuardTest {
     @Test
     @DisplayName("Should pass validation with valid subscription and remaining quota")
     void validateCanPublishJob_Success() {
-        when(subscriptionRepository.findActiveByCompanyId(companyId))
+        when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(subscription));
         when(quotaRepository.findBySubscriptionId(subscription.getId()))
                 .thenReturn(Optional.of(quota));
@@ -81,7 +81,8 @@ class QuotaGuardTest {
     @Test
     @DisplayName("Should throw SUBSCRIPTION_REQUIRED when no active subscription")
     void validateCanPublishJob_NoSubscription() {
-        when(subscriptionRepository.findActiveByCompanyId(companyId)).thenReturn(Optional.empty());
+        when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
+                .thenReturn(Optional.empty());
 
         var ex =
                 assertThrows(ApiException.class, () -> quotaGuard.validateCanPublishJob(companyId));
@@ -92,7 +93,7 @@ class QuotaGuardTest {
     @DisplayName("Should throw SUBSCRIPTION_EXPIRED when subscription is past expiry")
     void validateCanPublishJob_Expired() {
         subscription.setExpiresAt(Instant.now().minus(1, ChronoUnit.DAYS));
-        when(subscriptionRepository.findActiveByCompanyId(companyId))
+        when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(subscription));
 
         var ex =
@@ -104,7 +105,7 @@ class QuotaGuardTest {
     @DisplayName("Should throw QUOTA_EXCEEDED when active jobs at limit")
     void validateCanPublishJob_QuotaExceeded() {
         quota.setJobsActive(5); // equals maxActiveJobs
-        when(subscriptionRepository.findActiveByCompanyId(companyId))
+        when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(subscription));
         when(quotaRepository.findBySubscriptionId(subscription.getId()))
                 .thenReturn(Optional.of(quota));
@@ -119,7 +120,7 @@ class QuotaGuardTest {
     void validateCanPublishJob_UnlimitedPlan() {
         plan.setMaxActiveJobs(-1);
         quota.setJobsActive(999);
-        when(subscriptionRepository.findActiveByCompanyId(companyId))
+        when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(subscription));
 
         assertDoesNotThrow(() -> quotaGuard.validateCanPublishJob(companyId));
@@ -129,7 +130,7 @@ class QuotaGuardTest {
     @Test
     @DisplayName("Should increment active and posted counts")
     void incrementActiveJobs_Success() {
-        when(subscriptionRepository.findActiveByCompanyId(companyId))
+        when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(subscription));
         when(quotaRepository.findBySubscriptionId(subscription.getId()))
                 .thenReturn(Optional.of(quota));
@@ -145,7 +146,7 @@ class QuotaGuardTest {
     @DisplayName("Should decrement active count with floor at zero")
     void decrementActiveJobs_FloorAtZero() {
         quota.setJobsActive(0);
-        when(subscriptionRepository.findActiveByCompanyId(companyId))
+        when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(subscription));
         when(quotaRepository.findBySubscriptionId(subscription.getId()))
                 .thenReturn(Optional.of(quota));
