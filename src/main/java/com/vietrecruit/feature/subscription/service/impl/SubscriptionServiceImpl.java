@@ -79,7 +79,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     public SubscriptionResponse getCurrentSubscription(UUID companyId) {
         var subscription =
                 subscriptionRepository
-                        .findActiveByCompanyId(companyId)
+                        .findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE)
                         .orElseThrow(() -> new ApiException(ApiErrorCode.SUBSCRIPTION_REQUIRED));
         return mapper.toSubscriptionResponse(subscription);
     }
@@ -88,7 +88,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     public QuotaResponse getCurrentQuota(UUID companyId) {
         var subscription =
                 subscriptionRepository
-                        .findActiveByCompanyId(companyId)
+                        .findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE)
                         .orElseThrow(() -> new ApiException(ApiErrorCode.SUBSCRIPTION_REQUIRED));
 
         var quota =
@@ -108,7 +108,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     public void cancelSubscription(UUID companyId) {
         var subscription =
                 subscriptionRepository
-                        .findActiveByCompanyId(companyId)
+                        .findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE)
                         .orElseThrow(() -> new ApiException(ApiErrorCode.SUBSCRIPTION_REQUIRED));
 
         subscription.setStatus(SubscriptionStatus.CANCELLED);
