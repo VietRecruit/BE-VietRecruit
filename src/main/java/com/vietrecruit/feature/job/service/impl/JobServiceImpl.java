@@ -5,10 +5,10 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.vietrecruit.common.exception.ApiErrorCode;
+import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.job.entity.Job;
-import com.vietrecruit.feature.job.entity.JobStatus;
+import com.vietrecruit.feature.job.enums.JobStatus;
 import com.vietrecruit.feature.job.repository.JobRepository;
 import com.vietrecruit.feature.job.service.JobService;
 import com.vietrecruit.feature.subscription.service.QuotaGuard;
