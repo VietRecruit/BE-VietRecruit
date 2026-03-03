@@ -16,7 +16,7 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vietrecruit.common.exception.ApiErrorCode;
+import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.response.ApiResponse;
 import com.vietrecruit.feature.user.repository.UserRepository;
 
