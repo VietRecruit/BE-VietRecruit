@@ -6,7 +6,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.vietrecruit.feature.subscription.entity.SubscriptionStatus;
+import com.vietrecruit.feature.subscription.enums.SubscriptionStatus;
 import com.vietrecruit.feature.subscription.repository.EmployerSubscriptionRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,9 @@ public class SubscriptionExpiryTask {
     @Scheduled(cron = "0 0 2 * * *", zone = "Asia/Ho_Chi_Minh")
     @Transactional
     public void expireSubscriptions() {
-        var expired = subscriptionRepository.findExpiredActiveSubscriptions(Instant.now());
+        var expired =
+                subscriptionRepository.findExpiredActiveSubscriptions(
+                        Instant.now(), SubscriptionStatus.ACTIVE);
 
         if (expired.isEmpty()) {
             log.debug("No expired subscriptions found");

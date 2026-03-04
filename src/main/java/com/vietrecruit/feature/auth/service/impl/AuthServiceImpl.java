@@ -12,7 +12,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.vietrecruit.common.exception.ApiErrorCode;
+import com.vietrecruit.common.enums.ApiErrorCode;
+import com.vietrecruit.common.enums.EmailSenderAlias;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.common.security.AuthCacheService;
 import com.vietrecruit.common.security.JwtService;
@@ -30,7 +31,6 @@ import com.vietrecruit.feature.auth.repository.RefreshTokenRepository;
 import com.vietrecruit.feature.auth.repository.UserAuthProviderRepository;
 import com.vietrecruit.feature.auth.service.AuthService;
 import com.vietrecruit.feature.notification.dto.EmailRequest;
-import com.vietrecruit.feature.notification.dto.EmailSenderAlias;
 import com.vietrecruit.feature.notification.service.NotificationService;
 import com.vietrecruit.feature.user.entity.Permission;
 import com.vietrecruit.feature.user.entity.Role;

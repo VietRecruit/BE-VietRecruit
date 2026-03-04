@@ -8,13 +8,15 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.vietrecruit.common.exception.ApiErrorCode;
+import com.vietrecruit.common.enums.ApiErrorCode;
+import com.vietrecruit.common.enums.BillingCycle;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.subscription.dto.response.QuotaResponse;
 import com.vietrecruit.feature.subscription.dto.response.SubscriptionResponse;
 import com.vietrecruit.feature.subscription.entity.EmployerSubscription;
 import com.vietrecruit.feature.subscription.entity.JobPostingQuota;
-import com.vietrecruit.feature.subscription.entity.SubscriptionStatus;
+import com.vietrecruit.feature.subscription.entity.SubscriptionPlan;
+import com.vietrecruit.feature.subscription.enums.SubscriptionStatus;
 import com.vietrecruit.feature.subscription.mapper.SubscriptionMapper;
 import com.vietrecruit.feature.subscription.repository.EmployerSubscriptionRepository;
 import com.vietrecruit.feature.subscription.repository.JobPostingQuotaRepository;
@@ -29,6 +31,7 @@ import lombok.RequiredArgsConstructor;
 public class SubscriptionServiceImpl implements SubscriptionService {
 
     private static final int DEFAULT_BILLING_DAYS = 30;
+    private static final int YEARLY_BILLING_DAYS = 365;
 
     private final SubscriptionPlanRepository planRepository;
     private final EmployerSubscriptionRepository subscriptionRepository;
@@ -37,15 +40,11 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Override
     @Transactional
-    public SubscriptionResponse subscribe(UUID companyId, UUID planId) {
-        var plan =
-                planRepository
-                        .findById(planId)
-                        .filter(p -> Boolean.TRUE.equals(p.getIsActive()))
-                        .orElseThrow(() -> new ApiException(ApiErrorCode.PLAN_NOT_FOUND));
-
+    public SubscriptionResponse activateSubscription(
+            UUID companyId, SubscriptionPlan plan, BillingCycle cycle) {
         var now = Instant.now();
-        var expiresAt = now.plus(DEFAULT_BILLING_DAYS, ChronoUnit.DAYS);
+        int billingDays = cycle == BillingCycle.YEARLY ? YEARLY_BILLING_DAYS : DEFAULT_BILLING_DAYS;
+        var expiresAt = now.plus(billingDays, ChronoUnit.DAYS);
 
         var subscription =
                 EmployerSubscription.builder()
@@ -54,6 +53,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                         .status(SubscriptionStatus.ACTIVE)
                         .startedAt(now)
                         .expiresAt(expiresAt)
+                        .billingCycle(cycle)
                         .build();
 
         try {
@@ -79,7 +79,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     public SubscriptionResponse getCurrentSubscription(UUID companyId) {
         var subscription =
                 subscriptionRepository
-                        .findActiveByCompanyId(companyId)
+                        .findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE)
                         .orElseThrow(() -> new ApiException(ApiErrorCode.SUBSCRIPTION_REQUIRED));
         return mapper.toSubscriptionResponse(subscription);
     }
@@ -88,7 +88,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     public QuotaResponse getCurrentQuota(UUID companyId) {
         var subscription =
                 subscriptionRepository
-                        .findActiveByCompanyId(companyId)
+                        .findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE)
                         .orElseThrow(() -> new ApiException(ApiErrorCode.SUBSCRIPTION_REQUIRED));
 
         var quota =
@@ -108,7 +108,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     public void cancelSubscription(UUID companyId) {
         var subscription =
                 subscriptionRepository
-                        .findActiveByCompanyId(companyId)
+                        .findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE)
                         .orElseThrow(() -> new ApiException(ApiErrorCode.SUBSCRIPTION_REQUIRED));
 
         subscription.setStatus(SubscriptionStatus.CANCELLED);

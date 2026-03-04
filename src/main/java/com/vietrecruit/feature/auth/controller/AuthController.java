@@ -12,8 +12,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.vietrecruit.common.ApiConstants;
 import com.vietrecruit.common.base.BaseController;
+import com.vietrecruit.common.enums.ApiSuccessCode;
 import com.vietrecruit.common.response.ApiResponse;
-import com.vietrecruit.common.response.ApiSuccessCode;
 import com.vietrecruit.feature.auth.dto.request.ForgotPasswordRequest;
 import com.vietrecruit.feature.auth.dto.request.LoginRequest;
 import com.vietrecruit.feature.auth.dto.request.RegisterRequest;

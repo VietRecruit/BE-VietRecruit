@@ -16,7 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.vietrecruit.feature.subscription.entity.EmployerSubscription;
-import com.vietrecruit.feature.subscription.entity.SubscriptionStatus;
+import com.vietrecruit.feature.subscription.enums.SubscriptionStatus;
 import com.vietrecruit.feature.subscription.repository.EmployerSubscriptionRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,7 +36,8 @@ class SubscriptionExpiryTaskTest {
                         .expiresAt(Instant.now().minus(1, ChronoUnit.DAYS))
                         .build();
 
-        when(subscriptionRepository.findExpiredActiveSubscriptions(any(Instant.class)))
+        when(subscriptionRepository.findExpiredActiveSubscriptions(
+                        any(Instant.class), any(SubscriptionStatus.class)))
                 .thenReturn(List.of(sub));
 
         expiryTask.expireSubscriptions();
@@ -48,7 +49,8 @@ class SubscriptionExpiryTaskTest {
     @Test
     @DisplayName("Should do nothing when no expired subscriptions")
     void expireSubscriptions_NoneExpired() {
-        when(subscriptionRepository.findExpiredActiveSubscriptions(any(Instant.class)))
+        when(subscriptionRepository.findExpiredActiveSubscriptions(
+                        any(Instant.class), any(SubscriptionStatus.class)))
                 .thenReturn(Collections.emptyList());
 
         expiryTask.expireSubscriptions();

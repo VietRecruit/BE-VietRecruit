@@ -5,10 +5,11 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Component;
 
-import com.vietrecruit.common.exception.ApiErrorCode;
+import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.subscription.entity.EmployerSubscription;
 import com.vietrecruit.feature.subscription.entity.JobPostingQuota;
+import com.vietrecruit.feature.subscription.enums.SubscriptionStatus;
 import com.vietrecruit.feature.subscription.repository.EmployerSubscriptionRepository;
 import com.vietrecruit.feature.subscription.repository.JobPostingQuotaRepository;
 
@@ -56,7 +57,7 @@ public class QuotaGuard {
 
     private EmployerSubscription getActiveSubscription(UUID companyId) {
         return subscriptionRepository
-                .findActiveByCompanyId(companyId)
+                .findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE)
                 .orElseThrow(() -> new ApiException(ApiErrorCode.SUBSCRIPTION_REQUIRED));
     }
 
