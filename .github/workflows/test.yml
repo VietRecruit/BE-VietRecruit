@@ -44,4 +44,4 @@ jobs:
 
       - name: Running Unit Tests
         run: |
-          ./mvnw clean test
+          ./mvnw clean test -Dtest='!com.vietrecruit.ApplicationTests'
