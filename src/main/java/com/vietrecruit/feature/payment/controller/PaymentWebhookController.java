@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.vietrecruit.common.ApiConstants;
 import com.vietrecruit.feature.payment.service.PaymentService;
 
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class PaymentWebhookController {
     @Operation(
             summary = "PayOS Webhook",
             description = "Receives payment status updates from PayOS. Secured by HMAC signature.")
+    @RateLimiter(name = "webhookInbound")
     @PostMapping(ApiConstants.Webhook.PAYOS)
     public ResponseEntity<Void> handlePayOSWebhook(@RequestBody Object body) {
         try {
