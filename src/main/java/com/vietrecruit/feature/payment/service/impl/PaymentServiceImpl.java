@@ -2,6 +2,7 @@ package com.vietrecruit.feature.payment.service.impl;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vietrecruit.common.config.PayOSConfig;
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.enums.BillingCycle;
@@ -18,17 +20,20 @@ import com.vietrecruit.feature.payment.dto.response.CheckoutResponse;
 import com.vietrecruit.feature.payment.dto.response.PaymentStatusResponse;
 import com.vietrecruit.feature.payment.entity.PaymentTransaction;
 import com.vietrecruit.feature.payment.enums.PaymentStatus;
+import com.vietrecruit.feature.payment.exception.WebhookVerificationException;
 import com.vietrecruit.feature.payment.mapper.PaymentMapper;
 import com.vietrecruit.feature.payment.repository.PaymentTransactionRepository;
 import com.vietrecruit.feature.payment.repository.TransactionRecordRepository;
 import com.vietrecruit.feature.payment.service.PaymentService;
+import com.vietrecruit.feature.payment.service.WebhookSignatureVerifier;
 import com.vietrecruit.feature.subscription.enums.SubscriptionStatus;
 import com.vietrecruit.feature.subscription.repository.EmployerSubscriptionRepository;
 import com.vietrecruit.feature.subscription.repository.SubscriptionPlanRepository;
 import com.vietrecruit.feature.subscription.service.SubscriptionService;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
-import lombok.RequiredArgsConstructor;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import vn.payos.PayOS;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkRequest;
@@ -38,18 +43,47 @@ import vn.payos.model.webhooks.WebhookData;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PaymentServiceImpl implements PaymentService {
 
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     private final PayOS payOS;
     private final PayOSConfig payOSConfig;
+    private final WebhookSignatureVerifier webhookSignatureVerifier;
     private final SubscriptionPlanRepository planRepository;
     private final EmployerSubscriptionRepository subscriptionRepository;
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final TransactionRecordRepository transactionRecordRepository;
     private final SubscriptionService subscriptionService;
     private final PaymentMapper paymentMapper;
+    private final Counter webhookSignatureFailureCounter;
+
+    public PaymentServiceImpl(
+            PayOS payOS,
+            PayOSConfig payOSConfig,
+            WebhookSignatureVerifier webhookSignatureVerifier,
+            SubscriptionPlanRepository planRepository,
+            EmployerSubscriptionRepository subscriptionRepository,
+            PaymentTransactionRepository paymentTransactionRepository,
+            TransactionRecordRepository transactionRecordRepository,
+            SubscriptionService subscriptionService,
+            PaymentMapper paymentMapper,
+            MeterRegistry meterRegistry) {
+        this.payOS = payOS;
+        this.payOSConfig = payOSConfig;
+        this.webhookSignatureVerifier = webhookSignatureVerifier;
+        this.planRepository = planRepository;
+        this.subscriptionRepository = subscriptionRepository;
+        this.paymentTransactionRepository = paymentTransactionRepository;
+        this.transactionRecordRepository = transactionRecordRepository;
+        this.subscriptionService = subscriptionService;
+        this.paymentMapper = paymentMapper;
+        this.webhookSignatureFailureCounter =
+                Counter.builder("webhook.signature.failure")
+                        .description("Number of webhook requests with invalid signatures")
+                        .register(meterRegistry);
+    }
 
     @Override
     @Transactional
@@ -167,17 +201,37 @@ public class PaymentServiceImpl implements PaymentService {
     /**
      * TX 1: Verify webhook, update payment status. Always commits independently of subscription
      * activation. This ensures PAID status is persisted even if activation fails.
+     *
+     * <p>Signature verification uses in-house HMAC-SHA256 with timing-safe comparison
+     * (MessageDigest.isEqual) instead of the SDK's String.equals().
      */
     @Override
     @Transactional
+    @SuppressWarnings("unchecked")
     public void handleWebhook(Object webhookBody) {
-        WebhookData data;
+        // Deserialize payload to extract data and signature
+        Map<String, Object> payload;
         try {
-            data = payOS.webhooks().verify(webhookBody);
-        } catch (Exception e) {
+            payload = OBJECT_MAPPER.convertValue(webhookBody, Map.class);
+        } catch (IllegalArgumentException e) {
+            log.warn("Webhook payload deserialization failed: {}", e.getMessage());
+            return;
+        }
+
+        Object rawData = payload.get("data");
+        String signature = (String) payload.get("signature");
+
+        // Verify signature (timing-safe)
+        try {
+            webhookSignatureVerifier.verify(rawData, signature);
+        } catch (WebhookVerificationException e) {
+            webhookSignatureFailureCounter.increment();
             log.warn("Webhook signature verification failed: {}", e.getMessage());
             return;
         }
+
+        // Signature valid — deserialize data into SDK model for business logic
+        WebhookData data = OBJECT_MAPPER.convertValue(rawData, WebhookData.class);
 
         Long orderCode = data.getOrderCode();
         var txOpt = paymentTransactionRepository.findByOrderCode(orderCode);
