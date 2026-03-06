@@ -1,4 +1,4 @@
-package com.vietrecruit.common.exception;
+package com.vietrecruit.common.enums;
 
 import org.springframework.http.HttpStatus;
 
@@ -62,7 +62,17 @@ public enum ApiErrorCode {
             "An active subscription already exists", HttpStatus.CONFLICT),
     QUOTA_EXCEEDED("QUOTA_EXCEEDED", "Active job posting limit reached for your plan",
             HttpStatus.TOO_MANY_REQUESTS),
-    PLAN_NOT_FOUND("PLAN_NOT_FOUND", "Subscription plan not found", HttpStatus.NOT_FOUND);
+    PLAN_NOT_FOUND("PLAN_NOT_FOUND", "Subscription plan not found", HttpStatus.NOT_FOUND),
+
+    // Payment
+    PAYMENT_CREATION_FAILED("PAYMENT_CREATION_FAILED", "Failed to create payment link",
+            HttpStatus.BAD_GATEWAY),
+    PAYMENT_NOT_FOUND("PAYMENT_NOT_FOUND", "Payment transaction not found", HttpStatus.NOT_FOUND),
+    PAYMENT_ALREADY_PENDING("PAYMENT_ALREADY_PENDING", "A pending payment already exists",
+            HttpStatus.CONFLICT),
+    PAYMENT_EXPIRED("PAYMENT_EXPIRED", "Payment link has expired", HttpStatus.GONE),
+    PAYMENT_ACTIVATION_FAILED("PAYMENT_ACTIVATION_FAILED",
+            "Subscription activation failed after payment", HttpStatus.INTERNAL_SERVER_ERROR);
 
     // spotless:on
     private final String code;

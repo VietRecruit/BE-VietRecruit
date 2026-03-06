@@ -5,7 +5,7 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.vietrecruit.feature.job.entity.Job;
-import com.vietrecruit.feature.job.entity.JobStatus;
+import com.vietrecruit.feature.job.enums.JobStatus;
 
 public interface JobRepository extends JpaRepository<Job, UUID> {
 

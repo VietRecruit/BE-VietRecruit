@@ -1,4 +1,4 @@
-package com.vietrecruit.common.response;
+package com.vietrecruit.common.enums;
 
 import lombok.Getter;
 
@@ -35,7 +35,13 @@ public enum ApiSuccessCode {
     SUBSCRIPTION_CREATE_SUCCESS("SUBSCRIPTION_CREATE_SUCCESS", "Subscription activated successfully"),
     SUBSCRIPTION_FETCH_SUCCESS("SUBSCRIPTION_FETCH_SUCCESS", "Subscription retrieved successfully"),
     SUBSCRIPTION_CANCEL_SUCCESS("SUBSCRIPTION_CANCEL_SUCCESS", "Subscription cancelled successfully"),
-    QUOTA_FETCH_SUCCESS("QUOTA_FETCH_SUCCESS", "Quota usage retrieved successfully");
+    QUOTA_FETCH_SUCCESS("QUOTA_FETCH_SUCCESS", "Quota usage retrieved successfully"),
+
+    // Payment
+    CHECKOUT_SUCCESS("CHECKOUT_SUCCESS", "Payment link created successfully"),
+    PAYMENT_STATUS_FETCH_SUCCESS("PAYMENT_STATUS_FETCH_SUCCESS", "Payment status retrieved successfully"),
+    TRANSACTION_HISTORY_FETCH_SUCCESS("TRANSACTION_HISTORY_FETCH_SUCCESS",
+            "Transaction history retrieved successfully");
 
     // spotless:on
     private final String code;

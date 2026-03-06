@@ -25,4 +25,5 @@ INSERT INTO subscription_plans (code, name, description, max_active_jobs, job_du
     ('FREE',       'Free',       'Get started with basic job posting',            1,  15, FALSE, FALSE, FALSE, 0),
     ('BASIC',      'Basic',      'Essential tools for growing teams',             5,  30, TRUE,  FALSE, FALSE, 500000),
     ('PREMIUM',    'Premium',    'Advanced features for active recruiters',       20, 60, TRUE,  TRUE,  TRUE,  1500000),
+    ('DEV', 'Dev', 'Unlimited access for large-scale hiring',       -1, 90, TRUE,  TRUE,  TRUE,  10000),
     ('ENTERPRISE', 'Enterprise', 'Unlimited access for large-scale hiring',       -1, 90, TRUE,  TRUE,  TRUE,  5000000);

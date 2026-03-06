@@ -1,8 +1,10 @@
-package com.vietrecruit.feature.subscription.dto.request;
+package com.vietrecruit.feature.payment.dto.request;
 
 import java.util.UUID;
 
 import jakarta.validation.constraints.NotNull;
+
+import com.vietrecruit.common.enums.BillingCycle;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -13,8 +15,11 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class SubscribeRequest {
+public class CheckoutRequest {
 
     @NotNull(message = "Plan ID is required")
     private UUID planId;
+
+    @NotNull(message = "Billing cycle is required")
+    private BillingCycle billingCycle;
 }

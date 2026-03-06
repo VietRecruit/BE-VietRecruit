@@ -31,6 +31,7 @@ VietRecruit/
 │   │   │   │   └── ApiConstants.java   # API endpoint constants
 │   │   │   ├── feature/                # Feature modules (Domain-Driven Design)
 │   │   │   │   ├── job/                # Job management & posting
+│   │   │   │   ├── payment/            # Payment gateway & transactions (PayOS)
 │   │   │   │   ├── subscription/       # Employer subscription & quota
 │   │   │   │   └── example/            # Example module
 │   │   │   │       ├── controller/     # REST Endpoints

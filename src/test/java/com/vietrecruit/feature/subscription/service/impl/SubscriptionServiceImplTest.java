@@ -19,14 +19,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
-import com.vietrecruit.common.exception.ApiErrorCode;
+import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.subscription.dto.response.QuotaResponse;
 import com.vietrecruit.feature.subscription.dto.response.SubscriptionResponse;
 import com.vietrecruit.feature.subscription.entity.EmployerSubscription;
 import com.vietrecruit.feature.subscription.entity.JobPostingQuota;
 import com.vietrecruit.feature.subscription.entity.SubscriptionPlan;
-import com.vietrecruit.feature.subscription.entity.SubscriptionStatus;
+import com.vietrecruit.feature.subscription.enums.SubscriptionStatus;
 import com.vietrecruit.feature.subscription.mapper.SubscriptionMapper;
 import com.vietrecruit.feature.subscription.repository.EmployerSubscriptionRepository;
 import com.vietrecruit.feature.subscription.repository.JobPostingQuotaRepository;
@@ -94,15 +94,16 @@ class SubscriptionServiceImplTest {
     }
 
     @Test
-    @DisplayName("Should subscribe successfully")
-    void subscribe_Success() {
-        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+    @DisplayName("Should activate subscription successfully")
+    void activateSubscription_Success() {
         when(subscriptionRepository.saveAndFlush(any(EmployerSubscription.class)))
                 .thenReturn(subscription);
         when(mapper.toSubscriptionResponse(any(EmployerSubscription.class)))
                 .thenReturn(subscriptionResponse);
 
-        var result = subscriptionService.subscribe(companyId, planId);
+        var result =
+                subscriptionService.activateSubscription(
+                        companyId, plan, com.vietrecruit.common.enums.BillingCycle.MONTHLY);
 
         assertNotNull(result);
         assertEquals("BASIC", result.getPlanCode());
@@ -110,34 +111,26 @@ class SubscriptionServiceImplTest {
     }
 
     @Test
-    @DisplayName("Should throw when subscribing with already active subscription")
-    void subscribe_AlreadyActive() {
-        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
+    @DisplayName("Should throw when activating an already active subscription")
+    void activateSubscription_AlreadyActive() {
         when(subscriptionRepository.saveAndFlush(any(EmployerSubscription.class)))
                 .thenThrow(new DataIntegrityViolationException("unique constraint"));
 
         var ex =
                 assertThrows(
-                        ApiException.class, () -> subscriptionService.subscribe(companyId, planId));
+                        ApiException.class,
+                        () ->
+                                subscriptionService.activateSubscription(
+                                        companyId,
+                                        plan,
+                                        com.vietrecruit.common.enums.BillingCycle.MONTHLY));
         assertEquals(ApiErrorCode.SUBSCRIPTION_ALREADY_ACTIVE, ex.getErrorCode());
-    }
-
-    @Test
-    @DisplayName("Should throw when subscribing to inactive plan")
-    void subscribe_InactivePlan() {
-        plan.setIsActive(false);
-        when(planRepository.findById(planId)).thenReturn(Optional.of(plan));
-
-        var ex =
-                assertThrows(
-                        ApiException.class, () -> subscriptionService.subscribe(companyId, planId));
-        assertEquals(ApiErrorCode.PLAN_NOT_FOUND, ex.getErrorCode());
     }
 
     @Test
     @DisplayName("Should get current subscription")
     void getCurrentSubscription_Success() {
-        when(subscriptionRepository.findActiveByCompanyId(companyId))
+        when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(subscription));
         when(mapper.toSubscriptionResponse(subscription)).thenReturn(subscriptionResponse);
 
@@ -149,7 +142,8 @@ class SubscriptionServiceImplTest {
     @Test
     @DisplayName("Should throw when no active subscription for getCurrentSubscription")
     void getCurrentSubscription_NotFound() {
-        when(subscriptionRepository.findActiveByCompanyId(companyId)).thenReturn(Optional.empty());
+        when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
+                .thenReturn(Optional.empty());
 
         var ex =
                 assertThrows(
@@ -161,7 +155,7 @@ class SubscriptionServiceImplTest {
     @Test
     @DisplayName("Should get current quota")
     void getCurrentQuota_Success() {
-        when(subscriptionRepository.findActiveByCompanyId(companyId))
+        when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(subscription));
         when(quotaRepository.findBySubscriptionId(subscription.getId()))
                 .thenReturn(Optional.of(quota));
@@ -176,7 +170,7 @@ class SubscriptionServiceImplTest {
     @Test
     @DisplayName("Should cancel subscription")
     void cancelSubscription_Success() {
-        when(subscriptionRepository.findActiveByCompanyId(companyId))
+        when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(subscription));
         when(subscriptionRepository.save(any(EmployerSubscription.class))).thenReturn(subscription);
 
