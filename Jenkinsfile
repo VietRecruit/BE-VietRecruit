@@ -53,6 +53,8 @@ pipeline {
 
                         docker compose down -v
 
+                        docker rmi ${DOCKER_REPO}:latest || true
+
                         docker compose up -d
 
                         docker system prune -f
