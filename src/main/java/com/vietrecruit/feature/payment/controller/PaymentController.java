@@ -1,7 +1,5 @@
 package com.vietrecruit.feature.payment.controller;
 
-import java.util.UUID;
-
 import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
@@ -16,16 +14,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.vietrecruit.common.ApiConstants;
 import com.vietrecruit.common.base.BaseController;
-import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.enums.ApiSuccessCode;
-import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.common.response.ApiResponse;
-import com.vietrecruit.common.security.SecurityUtils;
 import com.vietrecruit.feature.payment.dto.request.CheckoutRequest;
 import com.vietrecruit.feature.payment.dto.response.CheckoutResponse;
 import com.vietrecruit.feature.payment.dto.response.PaymentStatusResponse;
 import com.vietrecruit.feature.payment.service.PaymentService;
-import com.vietrecruit.feature.user.repository.UserRepository;
 
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.swagger.v3.oas.annotations.Operation;
@@ -40,7 +34,6 @@ import lombok.RequiredArgsConstructor;
 public class PaymentController extends BaseController {
 
     private final PaymentService paymentService;
-    private final UserRepository userRepository;
 
     @Operation(
             summary = "Checkout",
@@ -78,25 +71,5 @@ public class PaymentController extends BaseController {
                 ApiResponse.success(
                         ApiSuccessCode.PAYMENT_STATUS_FETCH_SUCCESS,
                         paymentService.getPaymentStatus(orderCode, companyId)));
-    }
-
-    /**
-     * Resolves the company ID from the currently authenticated user. Throws FORBIDDEN if the user
-     * is not associated with a company.
-     */
-    private UUID resolveCompanyId() {
-        var userId = SecurityUtils.getCurrentUserId();
-        return userRepository
-                .findById(userId)
-                .map(
-                        user -> {
-                            if (user.getCompanyId() == null) {
-                                throw new ApiException(
-                                        ApiErrorCode.FORBIDDEN,
-                                        "User is not associated with any company");
-                            }
-                            return user.getCompanyId();
-                        })
-                .orElseThrow(() -> new ApiException(ApiErrorCode.NOT_FOUND, "User not found"));
     }
 }
