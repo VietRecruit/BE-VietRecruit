@@ -42,7 +42,15 @@ public enum ApiSuccessCode {
     CHECKOUT_SUCCESS("CHECKOUT_SUCCESS", "Payment link created successfully"),
     PAYMENT_STATUS_FETCH_SUCCESS("PAYMENT_STATUS_FETCH_SUCCESS", "Payment status retrieved successfully"),
     TRANSACTION_HISTORY_FETCH_SUCCESS("TRANSACTION_HISTORY_FETCH_SUCCESS",
-            "Transaction history retrieved successfully");
+            "Transaction history retrieved successfully"),
+
+    // Job
+    JOB_CREATE_SUCCESS("JOB_CREATE_SUCCESS", "Job created successfully"),
+    JOB_UPDATE_SUCCESS("JOB_UPDATE_SUCCESS", "Job updated successfully"),
+    JOB_PUBLISH_SUCCESS("JOB_PUBLISH_SUCCESS", "Job published successfully"),
+    JOB_CLOSE_SUCCESS("JOB_CLOSE_SUCCESS", "Job closed successfully"),
+    JOB_FETCH_SUCCESS("JOB_FETCH_SUCCESS", "Job retrieved successfully"),
+    JOB_LIST_SUCCESS("JOB_LIST_SUCCESS", "Job list retrieved successfully");
 
     // spotless:on
     private final String code;

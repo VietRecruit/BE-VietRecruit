@@ -78,4 +78,16 @@ public final class ApiConstants {
         public static final String ROOT = API_VERSION + "/webhooks";
         public static final String PAYOS = "/payos";
     }
+
+    public static final class Job {
+        private Job() {}
+
+        public static final String ROOT = API_VERSION + "/jobs";
+        public static final String GET = "/{id}";
+        public static final String UPDATE = "/{id}";
+        public static final String PUBLISH = "/{id}/publish";
+        public static final String CLOSE = "/{id}/close";
+        public static final String PUBLIC_ROOT = "/public";
+        public static final String PUBLIC_GET = "/public/{id}";
+    }
 }

@@ -54,6 +54,7 @@ public class SecurityConfig {
         "/vietrecruit/swagger-ui/**",
         "/vietrecruit/plans/**",
         "/vietrecruit/webhooks/**",
+        "/vietrecruit/jobs/public/**",
         "/actuator/**",
         "/actuator/prometheus",
         "/health/**"
