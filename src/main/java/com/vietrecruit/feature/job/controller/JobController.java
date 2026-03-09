@@ -21,9 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.vietrecruit.common.ApiConstants;
 import com.vietrecruit.common.base.BaseController;
-import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.enums.ApiSuccessCode;
-import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.common.response.ApiResponse;
 import com.vietrecruit.common.response.PageResponse;
 import com.vietrecruit.common.security.SecurityUtils;
@@ -33,7 +31,6 @@ import com.vietrecruit.feature.job.dto.response.JobResponse;
 import com.vietrecruit.feature.job.dto.response.JobSummaryResponse;
 import com.vietrecruit.feature.job.mapper.JobMapper;
 import com.vietrecruit.feature.job.service.JobService;
-import com.vietrecruit.feature.user.repository.UserRepository;
 
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.swagger.v3.oas.annotations.Operation;
@@ -49,7 +46,6 @@ public class JobController extends BaseController {
 
     private final JobService jobService;
     private final JobMapper jobMapper;
-    private final UserRepository userRepository;
 
     // ── Authenticated (Employer / HR) endpoints ──────────────────────────
 
@@ -163,23 +159,5 @@ public class JobController extends BaseController {
         return ResponseEntity.ok(
                 ApiResponse.success(
                         ApiSuccessCode.JOB_FETCH_SUCCESS, jobMapper.toJobResponse(job)));
-    }
-
-    // ── Internal ─────────────────────────────────────────────────────────
-
-    private UUID resolveCompanyId() {
-        var userId = SecurityUtils.getCurrentUserId();
-        return userRepository
-                .findById(userId)
-                .map(
-                        user -> {
-                            if (user.getCompanyId() == null) {
-                                throw new ApiException(
-                                        ApiErrorCode.FORBIDDEN,
-                                        "User is not associated with any company");
-                            }
-                            return user.getCompanyId();
-                        })
-                .orElseThrow(() -> new ApiException(ApiErrorCode.NOT_FOUND, "User not found"));
     }
 }
