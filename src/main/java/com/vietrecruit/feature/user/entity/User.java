@@ -54,8 +54,17 @@ public class User {
     @Column(length = 50)
     private String phone;
 
-    @Column(name = "avatar_url")
+    @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
+
+    @Column(name = "banner_url", length = 500)
+    private String bannerUrl;
+
+    @Column(name = "avatar_object_key", length = 500)
+    private String avatarObjectKey;
+
+    @Column(name = "banner_object_key", length = 500)
+    private String bannerObjectKey;
 
     @Column(name = "linkedin_url")
     private String linkedinUrl;

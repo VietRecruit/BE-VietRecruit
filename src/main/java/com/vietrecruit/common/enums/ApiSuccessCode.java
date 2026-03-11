@@ -75,7 +75,21 @@ public enum ApiSuccessCode {
     CATEGORY_UPDATE_SUCCESS("CATEGORY_UPDATE_SUCCESS", "Category updated successfully"),
     CATEGORY_DELETE_SUCCESS("CATEGORY_DELETE_SUCCESS", "Category deleted successfully"),
     CATEGORY_FETCH_SUCCESS("CATEGORY_FETCH_SUCCESS", "Category retrieved successfully"),
-    CATEGORY_LIST_SUCCESS("CATEGORY_LIST_SUCCESS", "Category list retrieved successfully");
+    CATEGORY_LIST_SUCCESS("CATEGORY_LIST_SUCCESS", "Category list retrieved successfully"),
+
+    // Candidate
+    CANDIDATE_FETCH_SUCCESS("CANDIDATE_FETCH_SUCCESS", "Candidate profile retrieved successfully"),
+    CANDIDATE_UPDATE_SUCCESS("CANDIDATE_UPDATE_SUCCESS", "Candidate profile updated successfully"),
+    CANDIDATE_CV_UPLOAD_SUCCESS("CANDIDATE_CV_UPLOAD_SUCCESS", "CV uploaded successfully"),
+    CANDIDATE_CV_DELETE_SUCCESS("CANDIDATE_CV_DELETE_SUCCESS", "CV deleted successfully"),
+
+    // User Avatar & Banner
+    USER_AVATAR_UPLOAD_SUCCESS("USER_AVATAR_UPLOAD_SUCCESS", "Avatar uploaded successfully"),
+    USER_AVATAR_UPDATE_SUCCESS("USER_AVATAR_UPDATE_SUCCESS", "Avatar URL updated successfully"),
+    USER_AVATAR_DELETE_SUCCESS("USER_AVATAR_DELETE_SUCCESS", "Avatar deleted successfully"),
+    USER_BANNER_UPLOAD_SUCCESS("USER_BANNER_UPLOAD_SUCCESS", "Banner uploaded successfully"),
+    USER_BANNER_UPDATE_SUCCESS("USER_BANNER_UPDATE_SUCCESS", "Banner URL updated successfully"),
+    USER_BANNER_DELETE_SUCCESS("USER_BANNER_DELETE_SUCCESS", "Banner deleted successfully");
 
     // spotless:on
     private final String code;
