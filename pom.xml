@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.vietrecruit</groupId>
 	<artifactId>VietRecruit</artifactId>
-	<version>1.0.6</version>
+	<version>1.0.7</version>
 	<name>VietRecruit</name>
 	<description>VietRecruit</description>
 	<url/>
@@ -108,8 +108,6 @@
 			<artifactId>spring-boot-starter-data-redis</artifactId>
 		</dependency>
 
-
-
 		<!-- JPA -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -166,13 +164,6 @@
 			<version>11.10.0</version>
 		</dependency>
 
-		<!-- Cloudinary -->
-		<!--       <dependency>-->
-		<!--          <groupId>com.cloudinary</groupId>-->
-		<!--          <artifactId>cloudinary-http44</artifactId>-->
-		<!--          <version>1.39.0</version>-->
-		<!--       </dependency>-->
-
 		<!-- MapStruct -->
 		<dependency>
 			<groupId>org.mapstruct</groupId>
@@ -205,6 +196,13 @@
 			<groupId>vn.payos</groupId>
 			<artifactId>payos-java</artifactId>
 			<version>2.0.1</version>
+		</dependency>
+
+		<!-- AWS SDK v2 S3 (Cloudflare R2) -->
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>s3</artifactId>
+			<version>2.29.51</version>
 		</dependency>
 
 		<!-- Logstash -->

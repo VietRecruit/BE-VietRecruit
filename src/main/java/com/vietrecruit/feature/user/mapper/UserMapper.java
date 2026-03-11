@@ -36,6 +36,11 @@ public interface UserMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "deletedAt", ignore = true)
     @Mapping(target = "roles", ignore = true)
+    @Mapping(target = "bannerUrl", ignore = true)
+    @Mapping(target = "avatarObjectKey", ignore = true)
+    @Mapping(target = "bannerObjectKey", ignore = true)
+    @Mapping(target = "emailVerified", ignore = true)
+    @Mapping(target = "emailVerifiedAt", ignore = true)
     void updateProfile(@MappingTarget User user, UpdateProfileRequest request);
 
     @Mapping(target = "roles", source = "roles", qualifiedByName = "rolesToCodes")
@@ -53,6 +58,11 @@ public interface UserMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "deletedAt", ignore = true)
     @Mapping(target = "roles", ignore = true)
+    @Mapping(target = "bannerUrl", ignore = true)
+    @Mapping(target = "avatarObjectKey", ignore = true)
+    @Mapping(target = "bannerObjectKey", ignore = true)
+    @Mapping(target = "emailVerified", ignore = true)
+    @Mapping(target = "emailVerifiedAt", ignore = true)
     User toEntity(UserRequest request);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
@@ -68,6 +78,11 @@ public interface UserMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "deletedAt", ignore = true)
     @Mapping(target = "roles", ignore = true)
+    @Mapping(target = "bannerUrl", ignore = true)
+    @Mapping(target = "avatarObjectKey", ignore = true)
+    @Mapping(target = "bannerObjectKey", ignore = true)
+    @Mapping(target = "emailVerified", ignore = true)
+    @Mapping(target = "emailVerifiedAt", ignore = true)
     void updateEntity(@MappingTarget User user, UserRequest request);
 
     @Named("rolesToCodes")

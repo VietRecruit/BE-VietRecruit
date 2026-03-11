@@ -32,6 +32,8 @@ import com.vietrecruit.feature.auth.entity.UserAuthProvider;
 import com.vietrecruit.feature.auth.repository.RefreshTokenRepository;
 import com.vietrecruit.feature.auth.repository.UserAuthProviderRepository;
 import com.vietrecruit.feature.auth.service.AuthService;
+import com.vietrecruit.feature.candidate.entity.Candidate;
+import com.vietrecruit.feature.candidate.repository.CandidateRepository;
 import com.vietrecruit.feature.notification.dto.EmailRequest;
 import com.vietrecruit.feature.notification.service.NotificationService;
 import com.vietrecruit.feature.user.entity.Permission;
@@ -63,6 +65,7 @@ public class AuthServiceImpl implements AuthService {
     private static final int RESET_TOKEN_BYTES = 32;
 
     private final UserRepository userRepository;
+    private final CandidateRepository candidateRepository;
     private final RoleRepository roleRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserAuthProviderRepository userAuthProviderRepository;
@@ -136,6 +139,8 @@ public class AuthServiceImpl implements AuthService {
         user.getRoles().add(defaultRole);
 
         userRepository.save(user);
+
+        candidateRepository.save(Candidate.builder().userId(user.getId()).build());
 
         String otpCode = generateOtp();
         authCacheService.storeOtp(request.getEmail(), otpCode, user.getId(), OTP_TTL_SECONDS);
@@ -302,6 +307,9 @@ public class AuthServiceImpl implements AuthService {
                                                     .build();
                                     newUser.getRoles().add(defaultRole);
                                     User savedUser = userRepository.save(newUser);
+
+                                    candidateRepository.save(
+                                            Candidate.builder().userId(savedUser.getId()).build());
 
                                     userAuthProviderRepository.save(
                                             UserAuthProvider.builder()
