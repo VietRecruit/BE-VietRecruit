@@ -7,13 +7,13 @@ The Auth module provides secure authentication (Standard JWT & OAuth2), role-bas
 ## Architecture
 
 - **AuthController**: Exposes endpoints for login, registration, password reset, and OTP verification. Extends `BaseController`.
-- **AuthServiceImpl**: Implements core authentication logic, token generation, user locking, and delegates email triggers to the Notification module.
+- **AuthServiceImpl**: Implements core authentication logic, token generation, user locking, triggers Candidate profile auto-creation, and delegates email triggers to the Notification module.
 - **JwtService**: Handles JWT creation, parsing, and validation.
 - **AuthCacheService**: Manages OTP caching, brute-force counters, and token blacklisting using Redis.
 
 ## Flow
 
-1.  **Registration & Verification**: Users register and receive an OTP via email. They must verify the 8-digit OTP to activate the account.
+1.  **Registration & Verification**: Users register and receive an OTP via email. Upon registration, the system automatically provisions an empty Candidate profile linked to the new user. They must verify the 8-digit OTP to activate the account.
 2.  **Login**: Users authenticate with credentials or OAuth2. A successful login returns an Access Token (JWT) and a Refresh Token.
 3.  **Brute Force Protection**: Exceeding `MAX_FAILED_ATTEMPTS` (5) locks the account for 30 minutes.
 
@@ -25,12 +25,14 @@ sequenceDiagram
     participant AuthController
     participant AuthServiceImpl
     participant UserRepository
+    participant CandidateRepository
     participant AuthCacheService
     participant NotificationService
 
     Client->>AuthController: POST /api/v1/auth/register
     AuthController->>AuthServiceImpl: register(request)
     AuthServiceImpl->>UserRepository: save(User)
+    AuthServiceImpl->>CandidateRepository: save(Candidate)
     AuthServiceImpl->>AuthCacheService: storeOtp(email, code)
     AuthServiceImpl->>NotificationService: send(EmailRequest)
     NotificationService-->>Client: (Async) Send Email with OTP
