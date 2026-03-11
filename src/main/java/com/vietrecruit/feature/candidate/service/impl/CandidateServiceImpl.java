@@ -20,6 +20,8 @@ import com.vietrecruit.feature.candidate.mapper.CandidateMapper;
 import com.vietrecruit.feature.candidate.repository.CandidateRepository;
 import com.vietrecruit.feature.candidate.service.CandidateService;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -66,6 +68,8 @@ public class CandidateServiceImpl implements CandidateService {
 
     @Override
     @Transactional
+    @CircuitBreaker(name = "r2Storage", fallbackMethod = "uploadCvFallback")
+    @Retry(name = "r2Upload")
     public CvUploadResponse uploadCv(UUID userId, MultipartFile file) {
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
@@ -122,6 +126,7 @@ public class CandidateServiceImpl implements CandidateService {
 
     @Override
     @Transactional
+    @CircuitBreaker(name = "r2Storage", fallbackMethod = "deleteCvFallback")
     public void deleteCv(UUID userId) {
         Candidate candidate =
                 candidateRepository
@@ -181,5 +186,22 @@ public class CandidateServiceImpl implements CandidateService {
         int idx = url.indexOf("candidates/");
         if (idx < 0) return null;
         return url.substring(idx);
+    }
+
+    @SuppressWarnings("unused")
+    private CvUploadResponse uploadCvFallback(UUID userId, MultipartFile file, Throwable t) {
+        log.error("R2 upload circuit breaker triggered for userId={}: {}", userId, t.getMessage());
+        throw new ApiException(
+                ApiErrorCode.STORAGE_UNAVAILABLE,
+                "File storage is temporarily unavailable. Please try again later.");
+    }
+
+    @SuppressWarnings("unused")
+    private void deleteCvFallback(UUID userId, Throwable t) {
+        log.warn(
+                "R2 delete circuit breaker triggered for userId={}: {}. "
+                        + "CV metadata cleared, orphaned object may remain.",
+                userId,
+                t.getMessage());
     }
 }
