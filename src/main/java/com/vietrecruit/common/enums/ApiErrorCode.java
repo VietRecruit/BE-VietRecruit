@@ -77,6 +77,14 @@ public enum ApiErrorCode {
     PAYMENT_ACTIVATION_FAILED("PAYMENT_ACTIVATION_FAILED",
             "Subscription activation failed after payment", HttpStatus.INTERNAL_SERVER_ERROR),
 
+    // Candidate
+    CANDIDATE_NOT_FOUND("CANDIDATE_NOT_FOUND", "Candidate profile not found", HttpStatus.NOT_FOUND),
+    CANDIDATE_CV_INVALID_TYPE("CANDIDATE_CV_INVALID_TYPE",
+            "Unsupported file type. Accepted: PDF, DOCX, JPEG, PNG",
+            HttpStatus.UNSUPPORTED_MEDIA_TYPE),
+    CANDIDATE_CV_SIZE_EXCEEDED("CANDIDATE_CV_SIZE_EXCEEDED",
+            "File size exceeds the 5MB limit", HttpStatus.BAD_REQUEST),
+
     // Generic
     CONFLICT("CONFLICT", "Resource already exists", HttpStatus.CONFLICT);
 

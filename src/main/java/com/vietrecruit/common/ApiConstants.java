@@ -124,4 +124,13 @@ public final class ApiConstants {
         public static final String UPDATE = "/{id}";
         public static final String DELETE = "/{id}";
     }
+
+    public static final class Candidate {
+        private Candidate() {}
+
+        public static final String ROOT = API_VERSION + "/candidates";
+        public static final String ME = "/me";
+        public static final String ME_CV = "/me/cv";
+        public static final String GET = "/{id}";
+    }
 }

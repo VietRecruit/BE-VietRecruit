@@ -75,7 +75,13 @@ public enum ApiSuccessCode {
     CATEGORY_UPDATE_SUCCESS("CATEGORY_UPDATE_SUCCESS", "Category updated successfully"),
     CATEGORY_DELETE_SUCCESS("CATEGORY_DELETE_SUCCESS", "Category deleted successfully"),
     CATEGORY_FETCH_SUCCESS("CATEGORY_FETCH_SUCCESS", "Category retrieved successfully"),
-    CATEGORY_LIST_SUCCESS("CATEGORY_LIST_SUCCESS", "Category list retrieved successfully");
+    CATEGORY_LIST_SUCCESS("CATEGORY_LIST_SUCCESS", "Category list retrieved successfully"),
+
+    // Candidate
+    CANDIDATE_FETCH_SUCCESS("CANDIDATE_FETCH_SUCCESS", "Candidate profile retrieved successfully"),
+    CANDIDATE_UPDATE_SUCCESS("CANDIDATE_UPDATE_SUCCESS", "Candidate profile updated successfully"),
+    CANDIDATE_CV_UPLOAD_SUCCESS("CANDIDATE_CV_UPLOAD_SUCCESS", "CV uploaded successfully"),
+    CANDIDATE_CV_DELETE_SUCCESS("CANDIDATE_CV_DELETE_SUCCESS", "CV deleted successfully");
 
     // spotless:on
     private final String code;
