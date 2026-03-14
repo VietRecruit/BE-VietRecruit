@@ -65,17 +65,31 @@ public class JobServiceImpl implements JobService {
             throw new ApiException(ApiErrorCode.BAD_REQUEST, "Only DRAFT jobs can be published");
         }
 
-        // Validate subscription and quota before publishing
-        quotaGuard.validateCanPublishJob(companyId);
-
-        job.setStatus(JobStatus.PUBLISHED);
-        var saved = jobRepository.save(job);
-
-        // Increment active job count after successful save
-        quotaGuard.incrementActiveJobs(companyId);
-
-        log.info("Published job id={} company={}", jobId, companyId);
-        return saved;
+        // Retry quota operations on optimistic lock failure (max 3 attempts)
+        int maxAttempts = 3;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                quotaGuard.validateCanPublishJob(companyId);
+                job.setStatus(JobStatus.PUBLISHED);
+                var saved = jobRepository.save(job);
+                quotaGuard.incrementActiveJobs(companyId);
+                log.info("Published job id={} company={}", jobId, companyId);
+                return saved;
+            } catch (ApiException e) {
+                if (ApiErrorCode.CONFLICT.equals(e.getErrorCode()) && attempt < maxAttempts) {
+                    log.warn(
+                            "Quota optimistic lock retry attempt {}/{} for job={}",
+                            attempt,
+                            maxAttempts,
+                            jobId);
+                    continue;
+                }
+                throw e;
+            }
+        }
+        // Unreachable — loop always returns or throws
+        throw new ApiException(
+                ApiErrorCode.INTERNAL_ERROR, "Failed to publish job after retry exhaustion");
     }
 
     @Override

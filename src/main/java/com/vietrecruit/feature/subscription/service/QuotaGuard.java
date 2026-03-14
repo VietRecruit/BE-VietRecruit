@@ -3,6 +3,7 @@ package com.vietrecruit.feature.subscription.service;
 import java.time.Instant;
 import java.util.UUID;
 
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
@@ -14,7 +15,9 @@ import com.vietrecruit.feature.subscription.repository.EmployerSubscriptionRepos
 import com.vietrecruit.feature.subscription.repository.JobPostingQuotaRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class QuotaGuard {
@@ -35,13 +38,22 @@ public class QuotaGuard {
     /**
      * Increments active job count and total posted count for the company's current quota. Call this
      * when a job transitions to PUBLISHED.
+     *
+     * @throws ApiException with CONFLICT code if a concurrent update is detected (optimistic lock
+     *     failure)
      */
     public void incrementActiveJobs(UUID companyId) {
         var subscription = getActiveSubscription(companyId);
         var quota = getQuota(subscription);
         quota.setJobsActive(quota.getJobsActive() + 1);
         quota.setJobsPosted(quota.getJobsPosted() + 1);
-        quotaRepository.save(quota);
+        try {
+            quotaRepository.save(quota);
+        } catch (ObjectOptimisticLockingFailureException e) {
+            log.warn("Optimistic lock failure on quota increment for company={}", companyId);
+            throw new ApiException(
+                    ApiErrorCode.CONFLICT, "Concurrent quota update detected, please retry");
+        }
     }
 
     /**

@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -52,6 +53,10 @@ public class JobPostingQuota {
 
     @Column(name = "cycle_end", nullable = false)
     private Instant cycleEnd;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
