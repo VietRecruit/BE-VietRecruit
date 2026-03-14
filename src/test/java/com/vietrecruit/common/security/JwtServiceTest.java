@@ -22,7 +22,13 @@ class JwtServiceTest {
 
     @BeforeEach
     void setUp() {
-        jwtService = new JwtService(secret, accessTokenExpirationMs, refreshTokenExpirationMs);
+        jwtService =
+                new JwtService(
+                        secret,
+                        accessTokenExpirationMs,
+                        refreshTokenExpirationMs,
+                        "vietrecruit",
+                        "vietrecruit-api");
     }
 
     @Test
@@ -78,7 +84,9 @@ class JwtServiceTest {
     @DisplayName("Should correctly identify expired token")
     void shouldIdentifyExpiredToken() throws InterruptedException {
         // Create a JWT service with 1ms expiration
-        JwtService shortLivedJwtService = new JwtService(secret, 1, refreshTokenExpirationMs);
+        JwtService shortLivedJwtService =
+                new JwtService(
+                        secret, 1, refreshTokenExpirationMs, "vietrecruit", "vietrecruit-api");
         String token =
                 shortLivedJwtService.generateAccessToken(
                         UUID.randomUUID(), Set.of("CANDIDATE"), true);
