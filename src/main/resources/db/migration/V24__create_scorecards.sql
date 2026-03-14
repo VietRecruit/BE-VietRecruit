@@ -27,10 +27,11 @@ CREATE TABLE scorecards (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     -- Named constraints
-    CONSTRAINT fk_scorecards_interview    FOREIGN KEY (interview_id)   REFERENCES interviews(id) ON DELETE CASCADE,
-    CONSTRAINT fk_scorecards_interviewer  FOREIGN KEY (interviewer_id) REFERENCES users(id)      ON DELETE CASCADE,
+    CONSTRAINT fk_scorecards_interview    FOREIGN KEY (interview_id)   REFERENCES interviews(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_scorecards_interviewer  FOREIGN KEY (interviewer_id) REFERENCES users(id)      ON DELETE RESTRICT,
     CONSTRAINT fk_scorecards_created_by   FOREIGN KEY (created_by)     REFERENCES users(id)      ON DELETE SET NULL,
     CONSTRAINT fk_scorecards_updated_by   FOREIGN KEY (updated_by)     REFERENCES users(id)      ON DELETE SET NULL,
+    CONSTRAINT uq_scorecards_interview_interviewer UNIQUE (interview_id, interviewer_id),
     CONSTRAINT chk_scorecards_skill       CHECK (skill_score >= 0),
     CONSTRAINT chk_scorecards_attitude    CHECK (attitude_score >= 0),
     CONSTRAINT chk_scorecards_english     CHECK (english_score >= 0)
