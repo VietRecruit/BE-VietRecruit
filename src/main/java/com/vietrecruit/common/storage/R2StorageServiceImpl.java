@@ -5,6 +5,11 @@ import java.io.InputStream;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.vietrecruit.common.enums.ApiErrorCode;
+import com.vietrecruit.common.exception.ApiException;
+
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -26,6 +31,8 @@ public class R2StorageServiceImpl implements StorageService {
     private String publicUrl;
 
     @Override
+    @CircuitBreaker(name = "r2Storage", fallbackMethod = "uploadFallback")
+    @Retry(name = "r2Storage")
     public String upload(String objectKey, InputStream data, String contentType, long sizeBytes) {
         PutObjectRequest request =
                 PutObjectRequest.builder()
@@ -41,19 +48,35 @@ public class R2StorageServiceImpl implements StorageService {
     }
 
     @Override
+    @CircuitBreaker(name = "r2Storage", fallbackMethod = "deleteFallback")
     public void delete(String objectKey) {
-        try {
-            DeleteObjectRequest request =
-                    DeleteObjectRequest.builder().bucket(bucket).key(objectKey).build();
+        DeleteObjectRequest request =
+                DeleteObjectRequest.builder().bucket(bucket).key(objectKey).build();
 
-            s3Client.deleteObject(request);
-            log.debug("Deleted object: bucket={}, key={}", bucket, objectKey);
-        } catch (Exception e) {
-            log.warn(
-                    "Failed to delete object from R2: bucket={}, key={}, error={}",
-                    bucket,
-                    objectKey,
-                    e.getMessage());
-        }
+        s3Client.deleteObject(request);
+        log.debug("Deleted object: bucket={}, key={}", bucket, objectKey);
+    }
+
+    @SuppressWarnings("unused")
+    private String uploadFallback(
+            String objectKey, InputStream data, String contentType, long sizeBytes, Throwable t) {
+        log.error(
+                "R2 upload circuit breaker triggered: bucket={}, key={}, error={}",
+                bucket,
+                objectKey,
+                t.getMessage());
+        throw new ApiException(
+                ApiErrorCode.STORAGE_UNAVAILABLE,
+                "File storage is temporarily unavailable. Please try again later.");
+    }
+
+    @SuppressWarnings("unused")
+    private void deleteFallback(String objectKey, Throwable t) {
+        log.warn(
+                "R2 delete circuit breaker triggered: bucket={}, key={}, error={}. "
+                        + "Orphaned object may remain.",
+                bucket,
+                objectKey,
+                t.getMessage());
     }
 }
