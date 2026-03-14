@@ -38,6 +38,13 @@ import lombok.extern.slf4j.Slf4j;
 @Transactional(readOnly = true)
 public class InterviewServiceImpl implements InterviewService {
 
+    private static final Map<InterviewStatus, Set<InterviewStatus>> ALLOWED_TRANSITIONS =
+            Map.of(
+                    InterviewStatus.SCHEDULED,
+                            Set.of(InterviewStatus.COMPLETED, InterviewStatus.CANCELED),
+                    InterviewStatus.COMPLETED, Set.of(),
+                    InterviewStatus.CANCELED, Set.of());
+
     private final InterviewRepository interviewRepository;
     private final ApplicationRepository applicationRepository;
     private final JobRepository jobRepository;
@@ -176,6 +183,13 @@ public class InterviewServiceImpl implements InterviewService {
         applicationRepository
                 .findByIdAndCompanyId(interview.getApplicationId(), companyId)
                 .orElseThrow(() -> new ApiException(ApiErrorCode.APPLICATION_NOT_FOUND));
+
+        // Validate status transition
+        if (!ALLOWED_TRANSITIONS
+                .getOrDefault(interview.getStatus(), Set.of())
+                .contains(request.getStatus())) {
+            throw new ApiException(ApiErrorCode.INTERVIEW_INVALID_STATUS_TRANSITION);
+        }
 
         interview.setStatus(request.getStatus());
         interview.setUpdatedBy(userId);
