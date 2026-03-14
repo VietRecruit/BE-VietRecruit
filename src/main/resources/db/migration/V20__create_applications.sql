@@ -23,8 +23,8 @@ CREATE TABLE applications (
     deleted_at     TIMESTAMPTZ,
 
     -- Named constraints
-    CONSTRAINT fk_applications_job       FOREIGN KEY (job_id)       REFERENCES jobs(id)       ON DELETE CASCADE,
-    CONSTRAINT fk_applications_candidate FOREIGN KEY (candidate_id) REFERENCES candidates(id) ON DELETE CASCADE,
+    CONSTRAINT fk_applications_job       FOREIGN KEY (job_id)       REFERENCES jobs(id)       ON DELETE RESTRICT,
+    CONSTRAINT fk_applications_candidate FOREIGN KEY (candidate_id) REFERENCES candidates(id) ON DELETE RESTRICT,
     CONSTRAINT uq_applications_job_candidate UNIQUE (job_id, candidate_id)
 );
 
