@@ -69,7 +69,7 @@ public class CandidateServiceImpl implements CandidateService {
     @Override
     @Transactional
     @CircuitBreaker(name = "r2Storage", fallbackMethod = "uploadCvFallback")
-    @Retry(name = "r2Upload")
+    @Retry(name = "r2Storage")
     public CvUploadResponse uploadCv(UUID userId, MultipartFile file) {
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
