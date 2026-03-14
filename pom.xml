@@ -323,6 +323,11 @@
 					</excludes>
 				</configuration>
 			</plugin>
+			<plugin>
+				<groupId>org.flywaydb</groupId>
+				<artifactId>flyway-maven-plugin</artifactId>
+				<version>11.10.0</version>
+			</plugin>
 		</plugins>
 	</build>
 	<repositories>
