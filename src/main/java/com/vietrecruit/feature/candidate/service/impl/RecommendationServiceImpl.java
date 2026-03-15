@@ -12,7 +12,10 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.slf4j.MDC;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.metadata.Usage;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -20,10 +23,11 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vietrecruit.common.ai.embedding.EmbeddingService;
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
+import com.vietrecruit.feature.ai.embedding.EmbeddingService;
 import com.vietrecruit.feature.candidate.entity.Candidate;
+import com.vietrecruit.feature.candidate.mapper.RecommendationMapper;
 import com.vietrecruit.feature.candidate.repository.CandidateRepository;
 import com.vietrecruit.feature.candidate.service.RecommendationService;
 import com.vietrecruit.feature.job.dto.response.JobRecommendationResponse;
@@ -39,25 +43,28 @@ import lombok.extern.slf4j.Slf4j;
 public class RecommendationServiceImpl implements RecommendationService {
 
     private static final String FALLBACK_REASON =
-            "Phu\u0300 ho\u0323p vo\u0301i ky\u0303 na\u0306ng va\u0300 kinh nghie\u0323m cu\u0309a ba\u0323n.";
+            "Ph\u00f9 h\u1ee3p v\u1edbi k\u1ef9 n\u0103ng v\u00e0 kinh nghi\u1ec7m c\u1ee7a b\u1ea1n.";
 
     private final EmbeddingService embeddingService;
     private final JobRepository jobRepository;
     private final CandidateRepository candidateRepository;
     private final ChatClient ragChatClient;
     private final ObjectMapper objectMapper;
+    private final RecommendationMapper recommendationMapper;
 
     public RecommendationServiceImpl(
             EmbeddingService embeddingService,
             JobRepository jobRepository,
             CandidateRepository candidateRepository,
             @Qualifier("ragChatClient") ChatClient ragChatClient,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            RecommendationMapper recommendationMapper) {
         this.embeddingService = embeddingService;
         this.jobRepository = jobRepository;
         this.candidateRepository = candidateRepository;
         this.ragChatClient = ragChatClient;
         this.objectMapper = objectMapper;
+        this.recommendationMapper = recommendationMapper;
     }
 
     @Override
@@ -69,7 +76,6 @@ public class RecommendationServiceImpl implements RecommendationService {
                         .orElseThrow(() -> new ApiException(ApiErrorCode.CANDIDATE_NOT_FOUND));
         UUID candidateId = candidate.getId();
 
-        // Step 1: Retrieve candidate CV document from vector store
         Filter.Expression cvFilter =
                 new Filter.Expression(
                         Filter.ExpressionType.AND,
@@ -86,7 +92,6 @@ public class RecommendationServiceImpl implements RecommendationService {
             return List.of();
         }
 
-        // Step 2: Use CV content as query to find similar jobs
         String cvContent = cvDocs.get(0).getText();
         Filter.Expression jobFilter =
                 new Filter.Expression(
@@ -96,7 +101,6 @@ public class RecommendationServiceImpl implements RecommendationService {
             return List.of();
         }
 
-        // Step 3: Batch fetch job entities, filter to PUBLISHED in memory
         List<UUID> jobIds =
                 jobDocs.stream()
                         .map(
@@ -116,7 +120,6 @@ public class RecommendationServiceImpl implements RecommendationService {
             return List.of();
         }
 
-        // Build score map from vector search results
         Map<UUID, Double> scoreMap = new HashMap<>();
         for (Document doc : jobDocs) {
             String jid = (String) doc.getMetadata().get("jobId");
@@ -125,10 +128,8 @@ public class RecommendationServiceImpl implements RecommendationService {
             }
         }
 
-        // Step 4: Generate match reasons via single batched LLM call
         Map<String, String> reasonMap = generateMatchReasons(cvContent, jobMap);
 
-        // Step 5: Build response sorted by matchScore descending
         List<JobRecommendationResponse> results = new ArrayList<>();
         for (Map.Entry<UUID, Job> entry : jobMap.entrySet()) {
             UUID jobId = entry.getKey();
@@ -140,9 +141,7 @@ public class RecommendationServiceImpl implements RecommendationService {
                             .doubleValue();
             String reason = reasonMap.getOrDefault(jobId.toString(), "");
 
-            results.add(
-                    new JobRecommendationResponse(
-                            jobId.toString(), job.getTitle(), null, null, roundedScore, reason));
+            results.add(recommendationMapper.toResponse(job, roundedScore, reason));
         }
 
         results.sort(Comparator.comparing(JobRecommendationResponse::matchScore).reversed());
@@ -181,19 +180,39 @@ public class RecommendationServiceImpl implements RecommendationService {
                             + "Jobs:\n"
                             + jobsBlock;
 
-            String response = ragChatClient.prompt().user(prompt).call().content();
+            MDC.put("ai_model", "recommendation");
+            try {
+                long startMs = System.currentTimeMillis();
+                ChatResponse chatResponse =
+                        ragChatClient.prompt().user(prompt).call().chatResponse();
+                long durationMs = System.currentTimeMillis() - startMs;
 
-            String cleaned = response.trim();
-            if (cleaned.startsWith("```")) {
-                cleaned = cleaned.replaceAll("```(?:json)?\\s*", "").replaceAll("```\\s*$", "");
+                Usage usage = chatResponse.getMetadata().getUsage();
+                log.info(
+                        "ai_call model={} prompt_tokens={} completion_tokens={} total_tokens={}"
+                                + " duration_ms={}",
+                        chatResponse.getMetadata().getModel(),
+                        usage.getPromptTokens(),
+                        usage.getCompletionTokens(),
+                        usage.getTotalTokens(),
+                        durationMs);
+
+                String response = chatResponse.getResult().getOutput().getText();
+
+                String cleaned = response.trim();
+                if (cleaned.startsWith("```")) {
+                    cleaned = cleaned.replaceAll("```(?:json)?\\s*", "").replaceAll("```\\s*$", "");
+                }
+
+                List<Map<String, String>> parsed =
+                        objectMapper.readValue(cleaned, new TypeReference<>() {});
+
+                return parsed.stream()
+                        .filter(m -> m.get("jobId") != null && m.get("reason") != null)
+                        .collect(Collectors.toMap(m -> m.get("jobId"), m -> m.get("reason")));
+            } finally {
+                MDC.remove("ai_model");
             }
-
-            List<Map<String, String>> parsed =
-                    objectMapper.readValue(cleaned, new TypeReference<>() {});
-
-            return parsed.stream()
-                    .filter(m -> m.get("jobId") != null && m.get("reason") != null)
-                    .collect(Collectors.toMap(m -> m.get("jobId"), m -> m.get("reason")));
         } catch (Exception e) {
             log.warn("Failed to generate match reasons: {}", e.getMessage());
             return Map.of();
