@@ -143,6 +143,12 @@ public enum ApiErrorCode {
     OFFER_APPLICATION_NOT_READY("OFFER_APPLICATION_NOT_READY", "Application must be in OFFER status",
             HttpStatus.BAD_REQUEST),
 
+    // AI
+    AI_SERVICE_UNAVAILABLE("AI_SERVICE_UNAVAILABLE", "AI service is temporarily unavailable",
+            HttpStatus.SERVICE_UNAVAILABLE),
+    AI_INVALID_RESPONSE("AI_INVALID_RESPONSE", "AI service returned an invalid response",
+            HttpStatus.BAD_GATEWAY),
+
     // Generic
     CONFLICT("CONFLICT", "Resource already exists", HttpStatus.CONFLICT);
 
