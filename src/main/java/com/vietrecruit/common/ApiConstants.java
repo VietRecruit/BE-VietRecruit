@@ -21,6 +21,7 @@ public final class ApiConstants {
         public static final String OAUTH2_EXCHANGE = "/oauth2/exchange";
         public static final String CHANGE_PASSWORD = "/change-password";
         public static final String RESET_PASSWORD = "/reset-password";
+        public static final String REGISTER_INVITE = "/register/invite";
     }
 
     public static final class ClientUser {
@@ -43,6 +44,12 @@ public final class ApiConstants {
         public static final String UPDATE = "/{id}";
         public static final String DELETE = "/{id}";
         public static final String SEARCH = "/search";
+    }
+
+    public static final class Invitation {
+        private Invitation() {}
+
+        public static final String ROOT = API_VERSION + "/invitations";
     }
 
     public static final class Plan {
