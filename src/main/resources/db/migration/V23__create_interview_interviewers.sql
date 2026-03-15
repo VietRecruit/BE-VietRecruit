@@ -10,6 +10,6 @@ CREATE TABLE interview_interviewers (
 
     PRIMARY KEY (interview_id, user_id),
 
-    CONSTRAINT fk_ii_interview FOREIGN KEY (interview_id) REFERENCES interviews(id) ON DELETE CASCADE,
-    CONSTRAINT fk_ii_user      FOREIGN KEY (user_id)      REFERENCES users(id)      ON DELETE CASCADE
+    CONSTRAINT fk_ii_interview FOREIGN KEY (interview_id) REFERENCES interviews(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_ii_user      FOREIGN KEY (user_id)      REFERENCES users(id)      ON DELETE RESTRICT
 );

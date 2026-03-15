@@ -18,8 +18,10 @@ public final class ApiConstants {
         public static final String VERIFY_OTP = "/verify-otp";
         public static final String RESEND_OTP = "/resend-otp";
         public static final String OAUTH2_CALLBACK = "/oauth2/callback/*";
+        public static final String OAUTH2_EXCHANGE = "/oauth2/exchange";
         public static final String CHANGE_PASSWORD = "/change-password";
         public static final String RESET_PASSWORD = "/reset-password";
+        public static final String REGISTER_INVITE = "/register/invite";
     }
 
     public static final class ClientUser {
@@ -42,6 +44,12 @@ public final class ApiConstants {
         public static final String UPDATE = "/{id}";
         public static final String DELETE = "/{id}";
         public static final String SEARCH = "/search";
+    }
+
+    public static final class Invitation {
+        private Invitation() {}
+
+        public static final String ROOT = API_VERSION + "/invitations";
     }
 
     public static final class Plan {
@@ -135,6 +143,7 @@ public final class ApiConstants {
         public static final String ROOT = API_VERSION + "/candidates";
         public static final String ME = "/me";
         public static final String ME_CV = "/me/cv";
+        public static final String ME_JOB_RECOMMENDATIONS = "/me/job-recommendations";
         public static final String GET = "/{id}";
     }
 
@@ -148,6 +157,8 @@ public final class ApiConstants {
         public static final String STATUS_HISTORY = "/{id}/status-history";
         public static final String INTERVIEWS = "/{id}/interviews";
         public static final String OFFERS = "/{id}/offers";
+        public static final String SCREENING = "/jobs/{jobId}/screening";
+        public static final String SCREENING_TRIGGER = "/jobs/{jobId}/screening/trigger";
     }
 
     public static final class Interview {

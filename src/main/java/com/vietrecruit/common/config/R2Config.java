@@ -1,6 +1,7 @@
 package com.vietrecruit.common.config;
 
 import java.net.URI;
+import java.time.Duration;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -8,6 +9,7 @@ import org.springframework.context.annotation.Configuration;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 
@@ -23,8 +25,20 @@ public class R2Config {
     @Value("${cloudflare.r2.secret-key}")
     private String secretKey;
 
+    @Value("${cloudflare.r2.connection-timeout-seconds:5}")
+    private int connectionTimeoutSeconds;
+
+    @Value("${cloudflare.r2.socket-timeout-seconds:30}")
+    private int socketTimeoutSeconds;
+
     @Bean
     public S3Client s3Client() {
+        ClientOverrideConfiguration overrideConfig =
+                ClientOverrideConfiguration.builder()
+                        .apiCallTimeout(Duration.ofSeconds(socketTimeoutSeconds))
+                        .apiCallAttemptTimeout(Duration.ofSeconds(connectionTimeoutSeconds))
+                        .build();
+
         return S3Client.builder()
                 .endpointOverride(URI.create(endpoint))
                 .credentialsProvider(
@@ -32,6 +46,7 @@ public class R2Config {
                                 AwsBasicCredentials.create(accessKey, secretKey)))
                 .region(Region.of("auto"))
                 .forcePathStyle(true)
+                .overrideConfiguration(overrideConfig)
                 .build();
     }
 }

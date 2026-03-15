@@ -26,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccessHandler {
 
     private final AuthService authService;
+    private final OAuth2AuthorizationCodeStore authorizationCodeStore;
     private final HttpCookieOAuth2AuthorizationRequestRepository
             cookieAuthorizationRequestRepository;
 
@@ -58,13 +59,13 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
                         avatarUrl,
                         emailVerified);
 
+        // Store tokens behind one-time authorization code (never expose tokens in URL)
+        String code = authorizationCodeStore.storeTokens(loginResponse);
+
         String redirectUrl =
                 String.format(
-                        "%s/oauth2/callback?token=%s&refresh=%s&expires_in=%d",
-                        frontendBaseUrl,
-                        URLEncoder.encode(loginResponse.getAccessToken(), StandardCharsets.UTF_8),
-                        URLEncoder.encode(loginResponse.getRefreshToken(), StandardCharsets.UTF_8),
-                        loginResponse.getExpiresIn());
+                        "%s/oauth2/callback?code=%s",
+                        frontendBaseUrl, URLEncoder.encode(code, StandardCharsets.UTF_8));
 
         cookieAuthorizationRequestRepository.removeAuthorizationRequestCookies(request, response);
         response.sendRedirect(redirectUrl);

@@ -27,7 +27,7 @@ CREATE TABLE interviews (
     deleted_at       TIMESTAMPTZ,
 
     -- Named constraints
-    CONSTRAINT fk_interviews_application FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
+    CONSTRAINT fk_interviews_application FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE RESTRICT,
     CONSTRAINT fk_interviews_created_by  FOREIGN KEY (created_by)     REFERENCES users(id)        ON DELETE SET NULL,
     CONSTRAINT fk_interviews_updated_by  FOREIGN KEY (updated_by)     REFERENCES users(id)        ON DELETE SET NULL
 );

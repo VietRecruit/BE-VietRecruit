@@ -70,7 +70,7 @@ public class ClientUserServiceImpl implements ClientUserService {
     @Override
     @Transactional
     @CircuitBreaker(name = "r2Storage", fallbackMethod = "uploadAvatarFallback")
-    @Retry(name = "r2Upload")
+    @Retry(name = "r2Storage")
     public AvatarUploadResponse uploadAvatar(MultipartFile file) {
         validateImageFile(
                 file,
@@ -139,7 +139,7 @@ public class ClientUserServiceImpl implements ClientUserService {
     @Override
     @Transactional
     @CircuitBreaker(name = "r2Storage", fallbackMethod = "uploadBannerFallback")
-    @Retry(name = "r2Upload")
+    @Retry(name = "r2Storage")
     public BannerUploadResponse uploadBanner(MultipartFile file) {
         validateImageFile(
                 file,

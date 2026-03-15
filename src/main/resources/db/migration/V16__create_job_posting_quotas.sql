@@ -20,6 +20,7 @@ CREATE TABLE job_posting_quotas (
     -- Audit columns
     created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    version         BIGINT      NOT NULL DEFAULT 0,
 
     -- Named constraints
     CONSTRAINT fk_quotas_subscription FOREIGN KEY (subscription_id) REFERENCES employer_subscriptions(id) ON DELETE CASCADE

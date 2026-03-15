@@ -20,7 +20,7 @@ CREATE TABLE application_status_history (
     changed_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     -- Named constraints
-    CONSTRAINT fk_app_history_application FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
+    CONSTRAINT fk_app_history_application FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE RESTRICT,
     CONSTRAINT fk_app_history_changed_by  FOREIGN KEY (changed_by)     REFERENCES users(id)        ON DELETE SET NULL
 );
 

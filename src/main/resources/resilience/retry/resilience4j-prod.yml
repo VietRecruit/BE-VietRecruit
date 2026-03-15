@@ -13,10 +13,23 @@ resilience4j:
         enableExponentialBackoff: true
         retryExceptions:
           - java.lang.RuntimeException
-      r2Upload:
-        maxAttempts: 2
+      r2Storage:
+        maxAttempts: 3
         waitDuration: 1s
         exponentialBackoffMultiplier: 2
         enableExponentialBackoff: true
         retryExceptions:
-          - software.amazon.awssdk.core.exception.SdkException
+          - software.amazon.awssdk.core.exception.SdkClientException
+          - software.amazon.awssdk.core.exception.SdkServiceException
+        ignoreExceptions:
+          - com.vietrecruit.common.exception.ApiException
+      openaiApi:
+        maxAttempts: 3
+        waitDuration: 1s
+        exponentialBackoffMultiplier: 2
+        enableExponentialBackoff: true
+        retryExceptions:
+          - org.springframework.web.client.ResourceAccessException
+          - java.io.IOException
+        ignoreExceptions:
+          - com.vietrecruit.common.exception.ApiException

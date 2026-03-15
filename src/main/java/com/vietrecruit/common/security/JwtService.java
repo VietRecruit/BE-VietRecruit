@@ -23,14 +23,20 @@ public class JwtService {
     private final SecretKey signingKey;
     private final long accessTokenExpirationMs;
     private final long refreshTokenExpirationMs;
+    private final String issuer;
+    private final String audience;
 
     public JwtService(
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.access-token-expiration:900000}") long accessTokenExpirationMs,
-            @Value("${jwt.refresh-token-expiration:604800000}") long refreshTokenExpirationMs) {
+            @Value("${jwt.refresh-token-expiration:604800000}") long refreshTokenExpirationMs,
+            @Value("${jwt.issuer:vietrecruit}") String issuer,
+            @Value("${jwt.audience:vietrecruit-api}") String audience) {
         this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.accessTokenExpirationMs = accessTokenExpirationMs;
         this.refreshTokenExpirationMs = refreshTokenExpirationMs;
+        this.issuer = issuer;
+        this.audience = audience;
     }
 
     public String generateAccessToken(UUID userId, Set<String> roleCodes, boolean emailVerified) {
@@ -40,6 +46,10 @@ public class JwtService {
         return Jwts.builder()
                 .id(UUID.randomUUID().toString())
                 .subject(userId.toString())
+                .issuer(issuer)
+                .audience()
+                .add(audience)
+                .and()
                 .claim("roles", roleCodes)
                 .claim("email_verified", emailVerified)
                 .issuedAt(now)
@@ -53,7 +63,13 @@ public class JwtService {
     }
 
     public Claims parseAndValidate(String token) {
-        return Jwts.parser().verifyWith(signingKey).build().parseSignedClaims(token).getPayload();
+        return Jwts.parser()
+                .verifyWith(signingKey)
+                .requireIssuer(issuer)
+                .requireAudience(audience)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
     public boolean isTokenValid(String token) {

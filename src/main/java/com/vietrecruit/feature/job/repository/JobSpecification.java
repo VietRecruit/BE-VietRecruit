@@ -29,7 +29,13 @@ public final class JobSpecification {
     }
 
     public static Specification<Job> titleContains(String keyword) {
-        return (root, query, cb) ->
-                cb.like(cb.lower(root.get("title")), "%" + keyword.toLowerCase() + "%");
+        return (root, query, cb) -> {
+            String escaped = escapeLikePattern(keyword.toLowerCase());
+            return cb.like(cb.lower(root.get("title")), "%" + escaped + "%", '\\');
+        };
+    }
+
+    private static String escapeLikePattern(String input) {
+        return input.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 }

@@ -27,7 +27,7 @@ CREATE TABLE offers (
     deleted_at       TIMESTAMPTZ,
 
     -- Named constraints
-    CONSTRAINT fk_offers_application FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
+    CONSTRAINT fk_offers_application FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE RESTRICT,
     CONSTRAINT fk_offers_created_by  FOREIGN KEY (created_by)     REFERENCES users(id)        ON DELETE SET NULL,
     CONSTRAINT fk_offers_updated_by  FOREIGN KEY (updated_by)     REFERENCES users(id)        ON DELETE SET NULL
 );
