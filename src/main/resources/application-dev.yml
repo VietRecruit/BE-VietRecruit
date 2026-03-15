@@ -9,11 +9,11 @@ spring:
       api-key: ${OPENAI_API_KEY}
       chat:
         options:
-          model: gpt-4o-mini
+          model: ${OPENAI_CHAT_MODEL}
           temperature: 0.2
       embedding:
         options:
-          model: text-embedding-3-small
+          model: ${OPENAI_EMBEDDING_MODEL}
     vectorstore:
       pgvector:
         initialize-schema: false
