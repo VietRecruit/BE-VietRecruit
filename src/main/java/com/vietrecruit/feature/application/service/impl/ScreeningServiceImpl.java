@@ -19,12 +19,13 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vietrecruit.common.ai.agent.AgentService;
-import com.vietrecruit.common.ai.embedding.EmbeddingService;
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
+import com.vietrecruit.feature.ai.agent.AgentService;
+import com.vietrecruit.feature.ai.embedding.EmbeddingService;
 import com.vietrecruit.feature.application.dto.response.ApplicationScreeningResponse;
 import com.vietrecruit.feature.application.entity.Application;
+import com.vietrecruit.feature.application.mapper.ScreeningMapper;
 import com.vietrecruit.feature.application.repository.ApplicationRepository;
 import com.vietrecruit.feature.application.service.ScreeningService;
 import com.vietrecruit.feature.candidate.entity.Candidate;
@@ -49,6 +50,7 @@ public class ScreeningServiceImpl implements ScreeningService {
     private final EmbeddingService embeddingService;
     private final AgentService agentService;
     private final ObjectMapper objectMapper;
+    private final ScreeningMapper screeningMapper;
 
     private static final int TOP_K_CANDIDATES = 20;
 
@@ -92,7 +94,7 @@ public class ScreeningServiceImpl implements ScreeningService {
         return result;
     }
 
-    @Async
+    @Async("aiTaskExecutor")
     @Override
     public void triggerAsyncScoring(UUID jobId, UUID companyId) {
         try {
@@ -208,20 +210,13 @@ public class ScreeningServiceImpl implements ScreeningService {
 
     private ApplicationScreeningResponse buildResponse(
             Application app, Candidate candidate, User user) {
-        ApplicationScreeningResponse.ApplicationScreeningResponseBuilder builder =
-                ApplicationScreeningResponse.builder()
-                        .applicationId(app.getId())
-                        .candidateId(app.getCandidateId())
-                        .candidateName(user != null ? user.getFullName() : null)
-                        .candidateEmail(user != null ? user.getEmail() : null)
-                        .aiScore(app.getAiScore())
-                        .applicationStatus(app.getStatus().name());
+        ApplicationScreeningResponse response = screeningMapper.toScreeningResponse(app, user);
 
         if (app.getAiScoreBreakdown() != null) {
             try {
                 Map<String, Object> breakdown =
                         objectMapper.readValue(app.getAiScoreBreakdown(), new TypeReference<>() {});
-                extractBreakdownFields(builder, breakdown);
+                applyBreakdownFields(response, breakdown);
             } catch (JsonProcessingException e) {
                 log.warn(
                         "Screening: failed to parse stored breakdown for applicationId={}",
@@ -229,40 +224,34 @@ public class ScreeningServiceImpl implements ScreeningService {
             }
         }
 
-        return builder.build();
+        return response;
     }
 
     @SuppressWarnings("unchecked")
-    private void extractBreakdownFields(
-            ApplicationScreeningResponse.ApplicationScreeningResponseBuilder builder,
-            Map<String, Object> breakdown) {
+    private void applyBreakdownFields(
+            ApplicationScreeningResponse response, Map<String, Object> breakdown) {
         Object breakdownObj = breakdown.get("breakdown");
-        if (breakdownObj instanceof Map) {
-            Map<String, Object> bdMap = (Map<String, Object>) breakdownObj;
+        if (breakdownObj instanceof Map<?, ?> bdMap) {
             Map<String, Integer> scoreBreakdown = new HashMap<>();
             bdMap.forEach(
                     (k, v) -> {
-                        if (v instanceof Number) {
-                            scoreBreakdown.put(k, ((Number) v).intValue());
+                        if (v instanceof Number num) {
+                            scoreBreakdown.put(k.toString(), num.intValue());
                         }
                     });
-            builder.scoreBreakdown(scoreBreakdown);
+            response.setScoreBreakdown(scoreBreakdown);
         }
-        Object strengthsObj = breakdown.get("strengths");
-        if (strengthsObj instanceof List) {
-            builder.strengths(((List<?>) strengthsObj).stream().map(Object::toString).toList());
+        if (breakdown.get("strengths") instanceof List<?> strengthsList) {
+            response.setStrengths(strengthsList.stream().map(Object::toString).toList());
         }
-        Object gapsObj = breakdown.get("gaps");
-        if (gapsObj instanceof List) {
-            builder.gaps(((List<?>) gapsObj).stream().map(Object::toString).toList());
+        if (breakdown.get("gaps") instanceof List<?> gapsList) {
+            response.setGaps(gapsList.stream().map(Object::toString).toList());
         }
-        Object summaryObj = breakdown.get("summary");
-        if (summaryObj instanceof String) {
-            builder.summary((String) summaryObj);
+        if (breakdown.get("summary") instanceof String summaryStr) {
+            response.setSummary(summaryStr);
         }
-        Object simObj = breakdown.get("similarityScore");
-        if (simObj instanceof Number) {
-            builder.similarityScore(((Number) simObj).doubleValue());
+        if (breakdown.get("similarityScore") instanceof Number simNum) {
+            response.setSimilarityScore(simNum.doubleValue());
         }
     }
 
