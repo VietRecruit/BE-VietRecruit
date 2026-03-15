@@ -136,6 +136,7 @@ public final class ApiConstants {
         public static final String ROOT = API_VERSION + "/candidates";
         public static final String ME = "/me";
         public static final String ME_CV = "/me/cv";
+        public static final String ME_JOB_RECOMMENDATIONS = "/me/job-recommendations";
         public static final String GET = "/{id}";
     }
 
@@ -149,6 +150,8 @@ public final class ApiConstants {
         public static final String STATUS_HISTORY = "/{id}/status-history";
         public static final String INTERVIEWS = "/{id}/interviews";
         public static final String OFFERS = "/{id}/offers";
+        public static final String SCREENING = "/jobs/{jobId}/screening";
+        public static final String SCREENING_TRIGGER = "/jobs/{jobId}/screening/trigger";
     }
 
     public static final class Interview {
