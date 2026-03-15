@@ -5,10 +5,12 @@ import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.vietrecruit.common.ai.event.CvUploadedEvent;
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.common.storage.StorageService;
@@ -43,6 +45,7 @@ public class CandidateServiceImpl implements CandidateService {
     private final CandidateRepository candidateRepository;
     private final CandidateMapper candidateMapper;
     private final StorageService storageService;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Override
     public CandidateProfileResponse getProfile(UUID userId) {
@@ -107,6 +110,25 @@ public class CandidateServiceImpl implements CandidateService {
         candidate.setCvFileSizeBytes(file.getSize());
         candidate.setCvUploadedAt(now);
         candidateRepository.save(candidate);
+
+        try {
+            CvUploadedEvent event =
+                    new CvUploadedEvent(
+                            candidate.getId(), objectKey, candidate.getCvOriginalFilename());
+            kafkaTemplate
+                    .send("ai.cv-uploaded", candidate.getId().toString(), event)
+                    .whenComplete(
+                            (result, ex) -> {
+                                if (ex != null) {
+                                    log.warn(
+                                            "Failed to publish CV uploaded event: candidateId={}",
+                                            candidate.getId(),
+                                            ex);
+                                }
+                            });
+        } catch (Exception e) {
+            log.warn("Failed to publish CV uploaded event: candidateId={}", candidate.getId(), e);
+        }
 
         if (oldCvUrl != null) {
             String oldKey = extractObjectKey(oldCvUrl);
