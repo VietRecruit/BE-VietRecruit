@@ -84,7 +84,8 @@ class AuthControllerTest {
         request.setPassword("password123");
         request.setFullName("New User");
 
-        when(authService.register(any(RegisterRequest.class))).thenReturn(java.util.Collections.emptyMap());
+        when(authService.register(any(RegisterRequest.class)))
+                .thenReturn(java.util.Collections.emptyMap());
 
         mockMvc.perform(
                         post(ApiConstants.Auth.ROOT + ApiConstants.Auth.REGISTER)
