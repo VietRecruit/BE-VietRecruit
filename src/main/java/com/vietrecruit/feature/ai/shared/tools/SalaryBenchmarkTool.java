@@ -1,4 +1,4 @@
-package com.vietrecruit.feature.ai.tool;
+package com.vietrecruit.feature.ai.shared.tools;
 
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Component;

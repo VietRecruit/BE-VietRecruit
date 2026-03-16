@@ -1,4 +1,4 @@
-package com.vietrecruit.feature.ai.tool;
+package com.vietrecruit.feature.ai.shared.tools;
 
 import java.util.List;
 

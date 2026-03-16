@@ -1,4 +1,4 @@
-package com.vietrecruit.feature.ai.event;
+package com.vietrecruit.feature.ai.shared.event;
 
 import java.util.UUID;
 
