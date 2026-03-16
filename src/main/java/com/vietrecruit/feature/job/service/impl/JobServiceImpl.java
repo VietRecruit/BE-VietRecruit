@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
-import com.vietrecruit.feature.ai.event.JobPublishedEvent;
+import com.vietrecruit.feature.ai.shared.event.JobPublishedEvent;
 import com.vietrecruit.feature.job.dto.request.JobCreateRequest;
 import com.vietrecruit.feature.job.dto.request.JobUpdateRequest;
 import com.vietrecruit.feature.job.entity.Job;
