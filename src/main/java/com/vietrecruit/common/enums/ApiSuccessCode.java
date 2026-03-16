@@ -122,6 +122,11 @@ public enum ApiSuccessCode {
     OFFER_RESPOND_SUCCESS("OFFER_RESPOND_SUCCESS", "Offer response recorded successfully"),
     OFFER_DELETE_SUCCESS("OFFER_DELETE_SUCCESS", "Offer deleted successfully"),
 
+    // Knowledge
+    KNOWLEDGE_UPLOAD_ACCEPTED("KNOWLEDGE_UPLOAD_ACCEPTED", "Knowledge document upload accepted for processing"),
+    KNOWLEDGE_LIST_SUCCESS("KNOWLEDGE_LIST_SUCCESS", "Knowledge documents retrieved successfully"),
+    KNOWLEDGE_DELETE_SUCCESS("KNOWLEDGE_DELETE_SUCCESS", "Knowledge document deleted successfully"),
+
     // User Avatar & Banner
     USER_AVATAR_UPLOAD_SUCCESS("USER_AVATAR_UPLOAD_SUCCESS", "Avatar uploaded successfully"),
     USER_AVATAR_UPDATE_SUCCESS("USER_AVATAR_UPDATE_SUCCESS", "Avatar URL updated successfully"),
