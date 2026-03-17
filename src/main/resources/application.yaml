@@ -73,6 +73,10 @@ ai:
       - salary-data
       - job-taxonomy
       - industry-overview
+      - jd-template
+  jd:
+    model: gpt-4o
+    temperature: 0.5
 
 cloudflare:
   r2:
