@@ -1,4 +1,10 @@
 package com.vietrecruit.feature.ai.jd.dto;
 
-// TODO: implement in prompt-xx-jd
-public record JdGenerateResponse() {}
+import java.time.Instant;
+import java.util.List;
+
+public record JdGenerateResponse(
+        String title,
+        GeneratedJobDescription generatedDescription,
+        List<String> biasFlags,
+        Instant generatedAt) {}
