@@ -259,4 +259,12 @@ public class JobServiceImpl implements JobService {
             UUID categoryId, UUID locationId) {
         return jobRepository.getSalaryBenchmark(categoryId, locationId);
     }
+
+    @Override
+    @Transactional
+    public void updateDescription(UUID companyId, UUID jobId, String description) {
+        var job = findJobByIdAndCompany(companyId, jobId);
+        job.setDescription(description);
+        jobRepository.save(job);
+    }
 }
