@@ -3,6 +3,7 @@ package com.vietrecruit.common.config.elasticsearch.sync;
 import static com.vietrecruit.common.config.elasticsearch.ElasticsearchConstants.INDEX_JOBS;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -17,6 +18,8 @@ import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.vietrecruit.common.config.kafka.KafkaTopicNames;
 import com.vietrecruit.feature.category.repository.CategoryRepository;
 import com.vietrecruit.feature.company.repository.CompanyRepository;
@@ -24,12 +27,10 @@ import com.vietrecruit.feature.job.document.JobDocument;
 import com.vietrecruit.feature.location.repository.LocationRepository;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class JobSyncConsumer {
 
     private final ElasticsearchClient esClient;
@@ -38,7 +39,40 @@ public class JobSyncConsumer {
     private final CategoryRepository categoryRepository;
     private final LocationRepository locationRepository;
 
+    private final Cache<UUID, String> companyNameCache;
+    private final Cache<UUID, String> categoryNameCache;
+    private final Cache<UUID, String> locationNameCache;
+
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
+
+    public JobSyncConsumer(
+            ElasticsearchClient esClient,
+            ObjectMapper objectMapper,
+            CompanyRepository companyRepository,
+            CategoryRepository categoryRepository,
+            LocationRepository locationRepository) {
+        this.esClient = esClient;
+        this.objectMapper = objectMapper;
+        this.companyRepository = companyRepository;
+        this.categoryRepository = categoryRepository;
+        this.locationRepository = locationRepository;
+
+        this.companyNameCache =
+                Caffeine.newBuilder()
+                        .maximumSize(500)
+                        .expireAfterWrite(Duration.ofSeconds(60))
+                        .build();
+        this.categoryNameCache =
+                Caffeine.newBuilder()
+                        .maximumSize(500)
+                        .expireAfterWrite(Duration.ofSeconds(60))
+                        .build();
+        this.locationNameCache =
+                Caffeine.newBuilder()
+                        .maximumSize(500)
+                        .expireAfterWrite(Duration.ofSeconds(60))
+                        .build();
+    }
 
     @RetryableTopic(
             attempts = "4",
@@ -86,7 +120,6 @@ public class JobSyncConsumer {
     }
 
     private void upsertToIndex(String id, Map<String, Object> payload) throws IOException {
-        // Denormalize related entity names
         String companyName = resolveName(payload, "company_id", this::lookupCompanyName);
         String categoryName = resolveName(payload, "category_id", this::lookupCategoryName);
         String locationName = resolveName(payload, "location_id", this::lookupLocationName);
@@ -108,6 +141,11 @@ public class JobSyncConsumer {
                         .maxSalary(extractDouble(payload, "max_salary"))
                         .currency(extractString(payload, "currency"))
                         .isNegotiable(extractBoolean(payload, "is_negotiable"))
+                        .viewCount(extractInteger(payload, "view_count"))
+                        .applicationCount(extractInteger(payload, "application_count"))
+                        .isHot(extractBoolean(payload, "is_hot"))
+                        .isFeatured(extractBoolean(payload, "is_featured"))
+                        .publishedAt(extractInstant(payload, "published_at"))
                         .deadline(extractString(payload, "deadline"))
                         .publicLink(extractString(payload, "public_link"))
                         .createdAt(extractInstant(payload, "created_at"))
@@ -145,15 +183,18 @@ public class JobSyncConsumer {
     }
 
     private String lookupCompanyName(UUID id) {
-        return companyRepository.findById(id).map(c -> c.getName()).orElse(null);
+        return companyNameCache.get(
+                id, key -> companyRepository.findById(key).map(c -> c.getName()).orElse(null));
     }
 
     private String lookupCategoryName(UUID id) {
-        return categoryRepository.findById(id).map(c -> c.getName()).orElse(null);
+        return categoryNameCache.get(
+                id, key -> categoryRepository.findById(key).map(c -> c.getName()).orElse(null));
     }
 
     private String lookupLocationName(UUID id) {
-        return locationRepository.findById(id).map(l -> l.getName()).orElse(null);
+        return locationNameCache.get(
+                id, key -> locationRepository.findById(key).map(l -> l.getName()).orElse(null));
     }
 
     private String extractString(Map<String, Object> map, String key) {
@@ -167,6 +208,19 @@ public class JobSyncConsumer {
         if (val instanceof String s) {
             try {
                 return Double.parseDouble(s);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private Integer extractInteger(Map<String, Object> map, String key) {
+        Object val = map.get(key);
+        if (val instanceof Number n) return n.intValue();
+        if (val instanceof String s) {
+            try {
+                return Integer.parseInt(s);
             } catch (NumberFormatException e) {
                 return null;
             }

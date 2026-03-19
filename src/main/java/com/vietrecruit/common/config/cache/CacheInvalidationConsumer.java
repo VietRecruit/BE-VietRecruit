@@ -4,17 +4,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.cache.CacheManager;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
-import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.annotation.RetryableTopic;
-import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
-import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Component;
 
 import com.vietrecruit.common.config.kafka.KafkaTopicNames;
@@ -27,8 +23,10 @@ import lombok.extern.slf4j.Slf4j;
  * the centralized {@link KafkaTopicNames#CACHE_INVALIDATION} topic and evicts affected cache
  * entries.
  *
- * <p>Uses Redis SCAN (never KEYS) for pattern-based eviction. Failures are logged but never block
- * Kafka offset commits.
+ * <p>Uses Redis SCAN (never KEYS) for pattern-based eviction. Transient Redis failures
+ * (RedisConnectionFailureException, DataAccessException) are re-thrown so Kafka's default retry can
+ * handle them. All other exceptions are logged with structured context and swallowed to avoid
+ * blocking offset commits.
  */
 @Slf4j
 @Component
@@ -38,11 +36,6 @@ public class CacheInvalidationConsumer {
     private final CacheManager cacheManager;
     private final RedisTemplate<String, String> cacheRedisTemplate;
 
-    @RetryableTopic(
-            attempts = "3",
-            backoff = @Backoff(delay = 1000, multiplier = 2),
-            topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE,
-            dltStrategy = org.springframework.kafka.retrytopic.DltStrategy.FAIL_ON_ERROR)
     @KafkaListener(
             topics = KafkaTopicNames.CACHE_INVALIDATION,
             groupId = "cache-invalidation-group")
@@ -63,31 +56,28 @@ public class CacheInvalidationConsumer {
                 case "plan" -> evictPlanCaches(event);
                 default -> log.warn("Unknown cache invalidation domain: {}", event.domain());
             }
-        } catch (Exception e) {
+        } catch (DataAccessException e) {
             log.error(
-                    "Cache eviction failed but not blocking offset commit: domain={}, entityId={}",
+                    "Transient Redis failure, re-throwing for Kafka retry: domain={}, key={}, eventType={}",
                     event.domain(),
                     event.entityId(),
+                    event.action(),
+                    e);
+            throw e;
+        } catch (Exception e) {
+            log.error(
+                    "Cache eviction failed (swallowed): domain={}, key={}, eventType={}",
+                    event.domain(),
+                    event.entityId(),
+                    event.action(),
                     e);
         }
     }
 
-    @DltHandler
-    public void handleDlt(ConsumerRecord<String, CacheInvalidationEvent> record) {
-        log.error(
-                "Cache invalidation moved to DLT: key={}, topic={}, partition={}, offset={}",
-                record.key(),
-                record.topic(),
-                record.partition(),
-                record.offset());
-    }
-
     private void evictJobCaches(CacheInvalidationEvent event) {
-        // Evict single job detail
         if (event.entityId() != null) {
             evictCacheEntry(CacheNames.JOB_DETAIL, event.entityId().toString());
         }
-        // Evict all paginated public job list caches (pattern scan)
         evictByPattern(CacheNames.JOB_PUBLIC_LIST_PREFIX + "*");
     }
 
@@ -95,7 +85,6 @@ public class CacheInvalidationConsumer {
         if (event.entityId() != null && event.scopeId() != null) {
             evictCacheEntry(CacheNames.CATEGORY_DETAIL, event.scopeId() + "::" + event.entityId());
         }
-        // Evict company's category list
         if (event.scopeId() != null) {
             evictCacheEntry(CacheNames.CATEGORY_LIST, event.scopeId().toString());
         }
