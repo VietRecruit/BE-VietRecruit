@@ -13,4 +13,8 @@ public final class KafkaTopicNames {
     // ========== Application Topics ==========
 
     public static final String NOTIFICATION_EMAIL = "notification.email";
+
+    // ========== Cache Invalidation Topics ==========
+
+    public static final String CACHE_INVALIDATION = "cache.invalidation";
 }
