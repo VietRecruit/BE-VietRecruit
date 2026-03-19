@@ -108,6 +108,9 @@ management:
   endpoint:
     health:
       show-details: always
+      group:
+        readiness:
+          include: readinessState,elasticsearchPopulation
     prometheus:
       enabled: true
   endpoints:
