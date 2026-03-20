@@ -30,7 +30,7 @@ services:
       APP_BASE_URL: ${APP_BASE_URL}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
       ELASTICSEARCH_URI: http://vr-elasticsearch:9200
-      LOGGING_LOGSTASH_HOST: vr-logstash
+      LOKI_URL: http://vr-loki:3100/loki/api/v1/push
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_CHAT_MODEL: ${OPENAI_CHAT_MODEL}
       OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL}
@@ -62,7 +62,7 @@ services:
         condition: service_healthy
       elasticsearch:
         condition: service_healthy
-      logstash:
+      loki:
         condition: service_healthy
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1" ]
@@ -261,6 +261,7 @@ services:
       - GF_SERVER_DOMAIN=localhost
     volumes:
       - ./grafana-storage:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
     ports:
       - "3000:3000"
     networks:
@@ -306,7 +307,10 @@ services:
       - "9187:9187"
 
   elasticsearch:
-    image: elasticsearch:7.17.25
+    build:
+      context: ./elk
+      dockerfile: elasticsearch.Dockerfile
+    image: vr-elasticsearch:8.17.0
     container_name: vr-elasticsearch
     volumes:
       - ./elk/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
@@ -325,32 +329,26 @@ services:
       retries: 5
       start_period: 60s
 
-  logstash:
-    image: logstash:7.17.25
-    container_name: vr-logstash
-    volumes:
-      - ./elk/logstash.yml:/usr/share/logstash/config/logstash.yml
-      - ./elk/pipeline:/usr/share/logstash/pipeline
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: vr-loki
     ports:
-      - "5044:5044"
-      - "5033:5000/tcp"
-      - "5022:5000/udp"
-      - "9600:9600"
-    environment:
-      LS_JAVA_OPTS: "-Xms512m -Xmx1g"
+      - "127.0.0.1:3100:3100"
+    command: -config.file=/etc/loki/config.yaml
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/config.yaml:ro
+      - loki-data:/loki
     networks:
       - vr-network
-    depends_on:
-      - elasticsearch
     healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:9600 || exit 1" ]
+      test: [ "CMD-SHELL", "wget -q --spider http://localhost:3100/ready || exit 1" ]
       interval: 15s
-      timeout: 10s
+      timeout: 5s
       retries: 5
-      start_period: 60s
+      start_period: 30s
 
   kibana:
-    image: kibana:7.17.25
+    image: docker.elastic.co/kibana/kibana:8.17.0
     container_name: vr-kibana
     volumes:
       - ./elk/kibana.yml:/usr/share/kibana/config/kibana.yml
@@ -385,6 +383,7 @@ services:
 volumes:
   db:
   kafka_data:
+  loki-data:
 
 
 networks:
