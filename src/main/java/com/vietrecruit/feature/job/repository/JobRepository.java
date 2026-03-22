@@ -43,4 +43,25 @@ public interface JobRepository extends JpaRepository<Job, UUID>, JpaSpecificatio
             nativeQuery = true)
     SalaryBenchmarkProjection getSalaryBenchmark(
             @Param("category") UUID categoryId, @Param("location") UUID locationId);
+
+    @Query(
+            value =
+                    """
+		SELECT
+			MIN(j.min_salary)          AS minSalary,
+			MAX(j.max_salary)          AS maxSalary,
+			PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (j.min_salary + j.max_salary) / 2.0) AS medianSalary,
+			COUNT(*)                 AS sampleSize
+		FROM jobs j
+		LEFT JOIN locations l ON j.location_id = l.id
+		WHERE (:jobTitle IS NULL OR LOWER(j.title) LIKE LOWER(CONCAT('%', :jobTitle, '%')))
+		AND (:locationName IS NULL OR LOWER(l.name) LIKE LOWER(CONCAT('%', :locationName, '%')))
+		AND j.status = 'PUBLISHED'
+		AND j.deleted_at IS NULL
+		AND j.min_salary IS NOT NULL
+		AND j.max_salary IS NOT NULL
+		""",
+            nativeQuery = true)
+    SalaryBenchmarkProjection getSalaryBenchmarkByText(
+            @Param("jobTitle") String jobTitle, @Param("locationName") String locationName);
 }

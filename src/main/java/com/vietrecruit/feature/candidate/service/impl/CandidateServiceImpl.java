@@ -23,6 +23,7 @@ import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.common.storage.StorageService;
 import com.vietrecruit.feature.ai.shared.event.CvUploadedEvent;
+import com.vietrecruit.feature.application.repository.ApplicationRepository;
 import com.vietrecruit.feature.candidate.dto.request.CandidateUpdateRequest;
 import com.vietrecruit.feature.candidate.dto.response.CandidateProfileResponse;
 import com.vietrecruit.feature.candidate.dto.response.CandidateSearchResult;
@@ -56,6 +57,7 @@ public class CandidateServiceImpl implements CandidateService {
     private final CandidateMapper candidateMapper;
     private final StorageService storageService;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final ApplicationRepository applicationRepository;
 
     @Override
     public CandidateProfileResponse getProfile(UUID userId) {
@@ -250,6 +252,71 @@ public class CandidateServiceImpl implements CandidateService {
                     List<Predicate> predicates = new ArrayList<>();
                     predicates.add(cb.isNull(root.get("deletedAt")));
                     predicates.add(cb.equal(root.get("isOpenToWork"), true));
+
+                    if (desiredPosition != null && !desiredPosition.isBlank()) {
+                        predicates.add(
+                                cb.like(
+                                        cb.lower(root.get("desiredPosition")),
+                                        "%" + desiredPosition.toLowerCase() + "%"));
+                    }
+                    if (minYearsExperience != null) {
+                        predicates.add(
+                                cb.greaterThanOrEqualTo(
+                                        root.get("yearsOfExperience"), minYearsExperience));
+                    }
+
+                    return cb.and(predicates.toArray(new Predicate[0]));
+                };
+
+        Page<Candidate> page = candidateRepository.findAll(spec, PageRequest.of(0, limit));
+        var stream = page.getContent().stream();
+
+        if (skills != null && !skills.isBlank()) {
+            String[] requiredSkills =
+                    Arrays.stream(skills.split(","))
+                            .map(String::trim)
+                            .map(String::toLowerCase)
+                            .toArray(String[]::new);
+            stream =
+                    stream.filter(
+                            c -> {
+                                if (c.getSkills() == null) return false;
+                                List<String> candidateSkills =
+                                        Arrays.stream(c.getSkills())
+                                                .map(String::toLowerCase)
+                                                .toList();
+                                return Arrays.stream(requiredSkills)
+                                        .anyMatch(candidateSkills::contains);
+                            });
+        }
+
+        return stream.map(
+                        c ->
+                                new CandidateSearchResult(
+                                        c.getId(),
+                                        c.getDesiredPosition(),
+                                        c.getYearsOfExperience(),
+                                        c.getSkills()))
+                .toList();
+    }
+
+    @Override
+    public List<CandidateSearchResult> searchCandidatesForCompany(
+            String skills,
+            String desiredPosition,
+            Short minYearsExperience,
+            int limit,
+            UUID companyId) {
+        List<UUID> applicantIds = applicationRepository.findCandidateIdsByCompanyId(companyId);
+        if (applicantIds.isEmpty()) {
+            return List.of();
+        }
+
+        Specification<Candidate> spec =
+                (root, query, cb) -> {
+                    List<Predicate> predicates = new ArrayList<>();
+                    predicates.add(cb.isNull(root.get("deletedAt")));
+                    predicates.add(root.get("id").in(applicantIds));
 
                     if (desiredPosition != null && !desiredPosition.isBlank()) {
                         predicates.add(

@@ -272,6 +272,12 @@ public class JobServiceImpl implements JobService {
     }
 
     @Override
+    public com.vietrecruit.feature.job.repository.SalaryBenchmarkProjection
+            getSalaryBenchmarkByText(String jobTitle, String locationName) {
+        return jobRepository.getSalaryBenchmarkByText(jobTitle, locationName);
+    }
+
+    @Override
     @Transactional
     public void updateDescription(UUID companyId, UUID jobId, String description) {
         var job = findJobByIdAndCompany(companyId, jobId);

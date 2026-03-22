@@ -28,4 +28,11 @@ public interface CandidateService {
 
     List<CandidateSearchResult> searchCandidates(
             String skills, String desiredPosition, Short minYearsExperience, int limit);
+
+    List<CandidateSearchResult> searchCandidatesForCompany(
+            String skills,
+            String desiredPosition,
+            Short minYearsExperience,
+            int limit,
+            UUID companyId);
 }
