@@ -25,7 +25,6 @@ import com.vietrecruit.common.storage.StorageService;
 import com.vietrecruit.feature.ai.shared.event.CvUploadedEvent;
 import com.vietrecruit.feature.application.repository.ApplicationRepository;
 import com.vietrecruit.feature.candidate.dto.request.CandidateUpdateRequest;
-import com.vietrecruit.feature.user.repository.UserRepository;
 import com.vietrecruit.feature.candidate.dto.response.CandidateProfileResponse;
 import com.vietrecruit.feature.candidate.dto.response.CandidateSearchResult;
 import com.vietrecruit.feature.candidate.dto.response.CvUploadResponse;
@@ -33,6 +32,7 @@ import com.vietrecruit.feature.candidate.entity.Candidate;
 import com.vietrecruit.feature.candidate.mapper.CandidateMapper;
 import com.vietrecruit.feature.candidate.repository.CandidateRepository;
 import com.vietrecruit.feature.candidate.service.CandidateService;
+import com.vietrecruit.feature.user.repository.UserRepository;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
@@ -133,8 +133,7 @@ public class CandidateServiceImpl implements CandidateService {
                             .orElse(null);
             if (candidateEmail == null) {
                 log.error(
-                        "AI ingestion: cannot resolve email for candidateId={}",
-                        candidate.getId());
+                        "AI ingestion: cannot resolve email for candidateId={}", candidate.getId());
             }
             CvUploadedEvent event =
                     new CvUploadedEvent(candidate.getId(), objectKey, candidateEmail);
