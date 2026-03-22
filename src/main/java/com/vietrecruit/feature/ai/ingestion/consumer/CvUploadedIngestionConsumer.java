@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 import com.vietrecruit.feature.ai.shared.event.CvUploadedEvent;
 import com.vietrecruit.feature.ai.shared.service.EmbeddingService;
 import com.vietrecruit.feature.candidate.entity.Candidate;
+import com.vietrecruit.feature.candidate.repository.CandidateRepository;
 import com.vietrecruit.feature.candidate.service.CandidateService;
 
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class CvUploadedIngestionConsumer {
 
     private final EmbeddingService embeddingService;
     private final CandidateService candidateService;
+    private final CandidateRepository candidateRepository;
     private final AiIngestionConsumer delegate;
 
     @RetryableTopic(
@@ -61,10 +63,18 @@ public class CvUploadedIngestionConsumer {
             return;
         }
 
+        // Persist parsed CV text so downstream services (e.g. CvImprovementService) can read it
+        if (candidate.getParsedCvText() == null || candidate.getParsedCvText().isBlank()) {
+            candidate.setParsedCvText(cvText);
+            candidateRepository.save(candidate);
+            log.info(
+                    "CV text extracted and stored for candidateId={}, chars={}",
+                    event.candidateId(),
+                    cvText.length());
+        }
+
         Map<String, Object> metadata =
-                Map.of(
-                        "type", "cv",
-                        "candidateId", event.candidateId().toString());
+                Map.of("type", "cv", "candidateId", event.candidateId().toString());
 
         embeddingService.embedAndStore(event.candidateId().toString(), cvText, metadata);
 
