@@ -106,7 +106,7 @@ management:
       enabled: true
   endpoint:
     health:
-      show-details: always
+      show-details: when_authorized
       group:
         readiness:
           include: readinessState,elasticsearchPopulation

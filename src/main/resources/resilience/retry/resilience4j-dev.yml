@@ -33,3 +33,12 @@ resilience4j:
           - java.io.IOException
         ignoreExceptions:
           - com.vietrecruit.common.exception.ApiException
+      githubApi:
+        maxAttempts: 2
+        waitDuration: 500ms
+      payosPayment:
+        maxAttempts: 2
+        waitDuration: 1s
+        exponentialBackoffMultiplier: 2
+        enableExponentialBackoff: true
+        maxWaitDuration: 5s
