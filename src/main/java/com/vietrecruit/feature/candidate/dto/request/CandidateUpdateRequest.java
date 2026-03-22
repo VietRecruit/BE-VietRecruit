@@ -28,6 +28,7 @@ public class CandidateUpdateRequest {
     private String headline;
 
     @Schema(description = "Professional summary")
+    @Size(max = 5000, message = "Summary must not exceed 5000 characters")
     private String summary;
 
     @Schema(description = "Desired job position", example = "Backend Engineer")

@@ -23,6 +23,7 @@ import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -34,6 +35,7 @@ public class CompanySearchServiceImpl implements CompanySearchService {
     private final ElasticsearchClient esClient;
 
     @Override
+    @CircuitBreaker(name = "elasticsearch", fallbackMethod = "searchFallback")
     public SearchPageResponse<CompanySearchResponse> search(CompanySearchRequest request) {
         try {
             var query = buildQuery(request);
@@ -141,6 +143,12 @@ public class CompanySearchServiceImpl implements CompanySearchService {
                 .highlights(highlights.isEmpty() ? null : highlights)
                 .score(hit.score())
                 .build();
+    }
+
+    private SearchPageResponse<CompanySearchResponse> searchFallback(
+            CompanySearchRequest request, Throwable t) {
+        log.warn("Elasticsearch circuit breaker open for company search: {}", t.getMessage());
+        return emptyResponse(request.getPage(), request.getSize());
     }
 
     private SearchPageResponse<CompanySearchResponse> emptyResponse(int page, int size) {

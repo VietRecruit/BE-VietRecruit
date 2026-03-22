@@ -25,8 +25,10 @@ public class JobCreateRequest {
     private String title;
 
     @NotBlank(message = "Description is required")
+    @Size(max = 50000, message = "Description must not exceed 50000 characters")
     private String description;
 
+    @Size(max = 50000, message = "Requirements must not exceed 50000 characters")
     private String requirements;
 
     private UUID departmentId;
