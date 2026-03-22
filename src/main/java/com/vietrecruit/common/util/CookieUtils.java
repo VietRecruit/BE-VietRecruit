@@ -7,6 +7,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.jackson2.SecurityJackson2Modules;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,11 +40,15 @@ public final class CookieUtils {
 
     public static void addCookie(
             HttpServletResponse response, String name, String value, int maxAge) {
-        Cookie cookie = new Cookie(name, value);
-        cookie.setPath("/");
-        cookie.setHttpOnly(true);
-        cookie.setMaxAge(maxAge);
-        response.addCookie(cookie);
+        ResponseCookie cookie =
+                ResponseCookie.from(name, value)
+                        .httpOnly(true)
+                        .secure(true)
+                        .sameSite("Lax")
+                        .path("/")
+                        .maxAge(maxAge)
+                        .build();
+        response.addHeader("Set-Cookie", cookie.toString());
     }
 
     public static void deleteCookie(
