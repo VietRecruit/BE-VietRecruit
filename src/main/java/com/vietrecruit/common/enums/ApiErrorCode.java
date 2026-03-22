@@ -78,6 +78,8 @@ public enum ApiErrorCode {
     PAYMENT_EXPIRED("PAYMENT_EXPIRED", "Payment link has expired", HttpStatus.GONE),
     PAYMENT_ACTIVATION_FAILED("PAYMENT_ACTIVATION_FAILED",
             "Subscription activation failed after payment", HttpStatus.INTERNAL_SERVER_ERROR),
+    PAYMENT_WEBHOOK_INVALID_SIGNATURE("PAYMENT_WEBHOOK_INVALID_SIGNATURE",
+            "Webhook signature verification failed", HttpStatus.BAD_REQUEST),
 
     // Candidate
     CANDIDATE_NOT_FOUND("CANDIDATE_NOT_FOUND", "Candidate profile not found", HttpStatus.NOT_FOUND),
