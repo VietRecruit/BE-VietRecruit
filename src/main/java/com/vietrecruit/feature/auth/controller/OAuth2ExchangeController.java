@@ -18,6 +18,7 @@ import com.vietrecruit.common.security.oauth2.OAuth2AuthorizationCodeStore;
 import com.vietrecruit.feature.auth.dto.request.OAuth2CodeExchangeRequest;
 import com.vietrecruit.feature.auth.dto.response.LoginResponse;
 
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ public class OAuth2ExchangeController extends BaseController {
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200",
             description = "Tokens returned successfully")
+    @RateLimiter(name = "authStrict")
     @PostMapping(ApiConstants.Auth.OAUTH2_EXCHANGE)
     public ResponseEntity<ApiResponse<LoginResponse>> exchangeCode(
             @Valid @RequestBody OAuth2CodeExchangeRequest request) {

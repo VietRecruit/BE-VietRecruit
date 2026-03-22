@@ -1,6 +1,7 @@
 package com.vietrecruit.feature.auth.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -28,6 +29,9 @@ public class ChangePasswordRequest {
             description = "New password (minimum 8 characters)",
             requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "New password is required")
-    @Size(min = 8, message = "New password must be at least 8 characters")
+    @Size(min = 8, max = 72, message = "New password must be between 8 and 72 characters")
+    @Pattern(
+            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,72}$",
+            message = "Password must contain uppercase, lowercase, digit, and special character")
     private String newPassword;
 }
