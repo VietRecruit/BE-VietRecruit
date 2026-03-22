@@ -18,10 +18,12 @@ import com.vietrecruit.feature.invitation.dto.CreateInvitationRequest;
 import com.vietrecruit.feature.invitation.dto.InvitationResponse;
 import com.vietrecruit.feature.invitation.service.InvitationService;
 
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
+@RateLimiter(name = "adminGeneral")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(ApiConstants.Invitation.ROOT)

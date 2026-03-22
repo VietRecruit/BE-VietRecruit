@@ -29,6 +29,7 @@ import com.vietrecruit.feature.user.dto.request.UserRequest;
 import com.vietrecruit.feature.user.dto.response.AdminUserResponse;
 import com.vietrecruit.feature.user.service.AdminUserService;
 
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -36,6 +37,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 @Validated
+@RateLimiter(name = "adminGeneral")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(ApiConstants.AdminUser.ROOT)
