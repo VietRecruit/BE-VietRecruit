@@ -6,8 +6,8 @@ import java.util.Set;
 
 import org.springframework.cache.CacheManager;
 import org.springframework.dao.DataAccessException;
-import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -128,16 +128,16 @@ public class CacheInvalidationConsumer {
         Set<String> keysToDelete = new HashSet<>();
         ScanOptions scanOptions = ScanOptions.scanOptions().match(pattern).count(100).build();
 
-        RedisConnection connection = cacheRedisTemplate.getConnectionFactory().getConnection();
-        try {
-            Cursor<byte[]> cursor = connection.keyCommands().scan(scanOptions);
-            while (cursor.hasNext()) {
-                keysToDelete.add(new String(cursor.next(), StandardCharsets.UTF_8));
-            }
-            cursor.close();
-        } finally {
-            connection.close();
-        }
+        cacheRedisTemplate.execute(
+                (RedisCallback<Void>)
+                        connection -> {
+                            Cursor<byte[]> cursor = connection.keyCommands().scan(scanOptions);
+                            while (cursor.hasNext()) {
+                                keysToDelete.add(new String(cursor.next(), StandardCharsets.UTF_8));
+                            }
+                            cursor.close();
+                            return null;
+                        });
 
         if (!keysToDelete.isEmpty()) {
             cacheRedisTemplate.delete(keysToDelete);
