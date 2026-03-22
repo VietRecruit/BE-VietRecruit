@@ -46,4 +46,9 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
                     + "WHERE a.id = :id AND j.companyId = :companyId AND a.deletedAt IS NULL")
     Optional<Application> findByIdAndCompanyId(
             @Param("id") UUID id, @Param("companyId") UUID companyId);
+
+    @Query(
+            "SELECT DISTINCT a.candidateId FROM Application a JOIN Job j ON a.jobId = j.id "
+                    + "WHERE j.companyId = :companyId AND a.deletedAt IS NULL")
+    List<UUID> findCandidateIdsByCompanyId(@Param("companyId") UUID companyId);
 }
