@@ -20,7 +20,8 @@ public class SalaryBenchmarkTool {
                             + " Returns min, median, max from existing job postings.")
     public String getSalaryBenchmark(String jobTitle, String location) {
 
-        SalaryBenchmarkProjection benchmark = jobService.getSalaryBenchmark(null, null);
+        SalaryBenchmarkProjection benchmark =
+                jobService.getSalaryBenchmarkByText(jobTitle, location);
 
         if (benchmark == null
                 || benchmark.getSampleSize() == null

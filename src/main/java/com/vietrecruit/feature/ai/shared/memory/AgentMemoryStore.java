@@ -25,9 +25,9 @@ public class AgentMemoryStore {
     private static final long TTL_HOURS = 1;
     private static final int MAX_HISTORY = 10;
 
-    public void append(String sessionId, String role, String content) {
-        String key = KEY_PREFIX + sessionId;
-        List<ChatMessage> history = getHistory(sessionId);
+    public void append(String userId, String sessionId, String role, String content) {
+        String key = KEY_PREFIX + userId + ":" + sessionId;
+        List<ChatMessage> history = getHistory(userId, sessionId);
         history.add(new ChatMessage(role, content));
         if (history.size() > MAX_HISTORY) {
             history = history.subList(history.size() - MAX_HISTORY, history.size());
@@ -40,8 +40,8 @@ public class AgentMemoryStore {
         }
     }
 
-    public List<ChatMessage> getHistory(String sessionId) {
-        String key = KEY_PREFIX + sessionId;
+    public List<ChatMessage> getHistory(String userId, String sessionId) {
+        String key = KEY_PREFIX + userId + ":" + sessionId;
         String json = redisTemplate.opsForValue().get(key);
         if (json == null || json.isBlank()) {
             return new java.util.ArrayList<>();
@@ -55,8 +55,8 @@ public class AgentMemoryStore {
         }
     }
 
-    public void clear(String sessionId) {
-        String key = KEY_PREFIX + sessionId;
+    public void clear(String userId, String sessionId) {
+        String key = KEY_PREFIX + userId + ":" + sessionId;
         redisTemplate.delete(key);
     }
 
