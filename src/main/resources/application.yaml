@@ -60,6 +60,7 @@ spring:
         index-type: hnsw
         distance-type: cosine_distance
         dimensions: 1536
+        similarity-threshold: 0.7
   servlet:
     multipart:
       max-file-size: 20MB
@@ -106,7 +107,7 @@ management:
       enabled: true
   endpoint:
     health:
-      show-details: always
+      show-details: when_authorized
       group:
         readiness:
           include: readinessState,elasticsearchPopulation

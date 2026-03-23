@@ -59,4 +59,7 @@ public interface JobService {
 
     com.vietrecruit.feature.job.repository.SalaryBenchmarkProjection getSalaryBenchmark(
             UUID categoryId, UUID locationId);
+
+    com.vietrecruit.feature.job.repository.SalaryBenchmarkProjection getSalaryBenchmarkByText(
+            String jobTitle, String locationName);
 }

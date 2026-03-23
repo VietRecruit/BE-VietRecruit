@@ -86,10 +86,10 @@ public class JobServiceImpl implements JobService {
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 quotaGuard.validateCanPublishJob(companyId);
+                quotaGuard.incrementActiveJobs(companyId);
                 job.setStatus(JobStatus.PUBLISHED);
                 job.setPublishedAt(java.time.Instant.now());
                 var saved = jobRepository.save(job);
-                quotaGuard.incrementActiveJobs(companyId);
                 log.info("Published job id={} company={}", jobId, companyId);
                 cacheEventPublisher.publish("job", "published", saved.getId(), companyId);
                 try {
@@ -269,6 +269,12 @@ public class JobServiceImpl implements JobService {
     public com.vietrecruit.feature.job.repository.SalaryBenchmarkProjection getSalaryBenchmark(
             UUID categoryId, UUID locationId) {
         return jobRepository.getSalaryBenchmark(categoryId, locationId);
+    }
+
+    @Override
+    public com.vietrecruit.feature.job.repository.SalaryBenchmarkProjection
+            getSalaryBenchmarkByText(String jobTitle, String locationName) {
+        return jobRepository.getSalaryBenchmarkByText(jobTitle, locationName);
     }
 
     @Override

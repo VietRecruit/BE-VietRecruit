@@ -40,6 +40,11 @@ public class EmailConsumer {
             topics = KafkaTopicNames.NOTIFICATION_EMAIL,
             groupId = "notification-email-group")
     public void consume(EmailRequest request) {
+        if (request == null || request.to() == null || request.subject() == null) {
+            log.error("Malformed EmailRequest received, skipping: {}", request);
+            return;
+        }
+
         log.info(
                 "Consumed email notification from Kafka: to={}, subject={}",
                 request.to(),

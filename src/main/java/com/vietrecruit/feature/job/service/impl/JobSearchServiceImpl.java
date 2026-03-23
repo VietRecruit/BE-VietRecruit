@@ -30,6 +30,7 @@ import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.CompletionSuggestOption;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.json.JsonData;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -46,6 +47,7 @@ public class JobSearchServiceImpl implements JobSearchService {
                     + " / 86400000.0; return 1.0 / (1.0 + ageD * ageD / 196.0);";
 
     @Override
+    @CircuitBreaker(name = "elasticsearch", fallbackMethod = "searchFallback")
     public SearchPageResponse<JobSearchResponse> search(JobSearchRequest request) {
         try {
             var query = buildFunctionScoreQuery(request);
@@ -341,6 +343,12 @@ public class JobSearchServiceImpl implements JobSearchService {
                 .highlights(highlights.isEmpty() ? null : highlights)
                 .score(hit.score())
                 .build();
+    }
+
+    private SearchPageResponse<JobSearchResponse> searchFallback(
+            JobSearchRequest request, Throwable t) {
+        log.warn("Elasticsearch circuit breaker open for job search: {}", t.getMessage());
+        return emptyResponse(request.getPage(), request.getSize());
     }
 
     private SearchPageResponse<JobSearchResponse> emptyResponse(int page, int size) {

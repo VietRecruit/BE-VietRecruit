@@ -76,6 +76,14 @@ public class RecommendationServiceImpl implements RecommendationService {
                         .orElseThrow(() -> new ApiException(ApiErrorCode.CANDIDATE_NOT_FOUND));
         UUID candidateId = candidate.getId();
 
+        String profileQuery = buildProfileQuery(candidate);
+        if (profileQuery == null || profileQuery.isBlank()) {
+            log.info(
+                    "Candidate profile incomplete, skipping embedding search: candidateId={}",
+                    candidateId);
+            return List.of();
+        }
+
         Filter.Expression cvFilter =
                 new Filter.Expression(
                         Filter.ExpressionType.AND,
@@ -87,7 +95,7 @@ public class RecommendationServiceImpl implements RecommendationService {
                                 Filter.ExpressionType.EQ,
                                 new Filter.Key("candidateId"),
                                 new Filter.Value(candidateId.toString())));
-        List<Document> cvDocs = embeddingService.search("", 1, cvFilter);
+        List<Document> cvDocs = embeddingService.search(profileQuery, 1, cvFilter);
         if (cvDocs.isEmpty()) {
             return List.of();
         }
@@ -146,6 +154,28 @@ public class RecommendationServiceImpl implements RecommendationService {
 
         results.sort(Comparator.comparing(JobRecommendationResponse::matchScore).reversed());
         return results;
+    }
+
+    private String buildProfileQuery(Candidate candidate) {
+        StringBuilder query = new StringBuilder();
+        if (candidate.getDesiredPosition() != null && !candidate.getDesiredPosition().isBlank()) {
+            query.append(candidate.getDesiredPosition());
+        }
+        if (candidate.getHeadline() != null && !candidate.getHeadline().isBlank()) {
+            if (!query.isEmpty()) query.append(" ");
+            query.append(candidate.getHeadline());
+        }
+        if (candidate.getSkills() != null && candidate.getSkills().length > 0) {
+            if (!query.isEmpty()) query.append(" ");
+            int limit = Math.min(5, candidate.getSkills().length);
+            query.append(String.join(", ", java.util.Arrays.copyOf(candidate.getSkills(), limit)));
+        }
+        if (candidate.getSummary() != null && !candidate.getSummary().isBlank()) {
+            if (!query.isEmpty()) query.append(" ");
+            String summary = candidate.getSummary();
+            query.append(summary.length() > 200 ? summary.substring(0, 200) : summary);
+        }
+        return query.toString().trim();
     }
 
     private Map<String, String> generateMatchReasons(String cvContent, Map<UUID, Job> jobMap) {

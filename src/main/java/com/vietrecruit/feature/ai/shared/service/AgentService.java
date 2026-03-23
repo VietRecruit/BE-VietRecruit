@@ -9,6 +9,7 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
+import com.vietrecruit.common.security.SecurityUtils;
 import com.vietrecruit.feature.ai.shared.memory.AgentMemoryStore;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -34,7 +35,11 @@ public class AgentService {
     @CircuitBreaker(name = "openaiApi", fallbackMethod = "executeFallback")
     @RateLimiter(name = "openaiApi", fallbackMethod = "rateLimitFallback")
     public String execute(String sessionId, String userMessage, Object... toolBeans) {
-        List<AgentMemoryStore.ChatMessage> history = memoryStore.getHistory(sessionId);
+        String userId =
+                SecurityUtils.getCurrentUserIdOptional()
+                        .map(java.util.UUID::toString)
+                        .orElse("anon");
+        List<AgentMemoryStore.ChatMessage> history = memoryStore.getHistory(userId, sessionId);
 
         StringBuilder contextBuilder = new StringBuilder();
         for (AgentMemoryStore.ChatMessage msg : history) {
@@ -71,8 +76,8 @@ public class AgentService {
 
             String response = chatResponse.getResult().getOutput().getText();
 
-            memoryStore.append(sessionId, "user", userMessage);
-            memoryStore.append(sessionId, "assistant", response);
+            memoryStore.append(userId, sessionId, "user", userMessage);
+            memoryStore.append(userId, sessionId, "assistant", response);
 
             return response;
         } finally {

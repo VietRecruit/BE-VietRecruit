@@ -36,3 +36,25 @@ resilience4j:
         automaticTransitionFromOpenToHalfOpenEnabled: true
         eventConsumerBufferSize: 10
         registerHealthIndicator: true
+      elasticsearch:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 15s
+        permittedNumberOfCallsInHalfOpenState: 3
+        eventConsumerBufferSize: 10
+        registerHealthIndicator: true
+      githubApi:
+        slidingWindowSize: 5
+        failureRateThreshold: 60
+        waitDurationInOpenState: 30s
+        eventConsumerBufferSize: 10
+        registerHealthIndicator: true
+      payosPayment:
+        slidingWindowSize: 10
+        failureRateThreshold: 40
+        waitDurationInOpenState: 60s
+        permittedNumberOfCallsInHalfOpenState: 2
+        slowCallDurationThreshold: 5s
+        slowCallRateThreshold: 80
+        eventConsumerBufferSize: 10
+        registerHealthIndicator: true

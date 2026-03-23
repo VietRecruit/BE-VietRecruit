@@ -38,3 +38,7 @@ build/
 ### .env ###
 *.env
 .env.*
+
+### Production compose (local secrets) ###
+docker-compose.prod.yml
+docker-compose.prod tweaks.yml

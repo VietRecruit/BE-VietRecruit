@@ -27,8 +27,10 @@ import com.vietrecruit.feature.ai.knowledge.dto.KnowledgeDocumentResponse;
 import com.vietrecruit.feature.ai.knowledge.dto.KnowledgeUploadResponse;
 import com.vietrecruit.feature.ai.knowledge.service.KnowledgeIngestionService;
 
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import lombok.RequiredArgsConstructor;
 
+@RateLimiter(name = "adminGeneral")
 @RestController
 @RequestMapping("/vietrecruit/admin/knowledge")
 @RequiredArgsConstructor

@@ -53,15 +53,11 @@ public class ResendEmailClient {
                         .html(renderedHtml)
                         .build();
 
-        log.info(
-                "Sending email via Resend: from={}, to={}, subject={}",
-                fromAddress,
-                request.to(),
-                request.subject());
+        log.info("Sending email via Resend: from={}, subject={}", fromAddress, request.subject());
 
         try {
             CreateEmailResponse response = resend.emails().send(options);
-            log.info("Email sent via Resend: id={}, to={}", response.getId(), request.to());
+            log.info("Email sent via Resend: id={}", response.getId());
         } catch (ResendException e) {
             throw new RuntimeException("Resend API call failed", e);
         }

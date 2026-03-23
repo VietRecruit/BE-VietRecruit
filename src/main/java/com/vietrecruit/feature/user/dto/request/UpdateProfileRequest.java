@@ -2,6 +2,7 @@ package com.vietrecruit.feature.user.dto.request;
 
 import java.time.LocalDate;
 
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -28,15 +29,23 @@ public class UpdateProfileRequest {
     private String phone;
 
     @Schema(description = "URL to the user's avatar image")
+    @Size(max = 2048, message = "Avatar URL must not exceed 2048 characters")
+    @Pattern(regexp = "^https://.*", message = "Avatar URL must start with https://")
     private String avatarUrl;
 
     @Schema(description = "LinkedIn profile URL")
+    @Size(max = 2048, message = "LinkedIn URL must not exceed 2048 characters")
+    @Pattern(regexp = "^https://.*", message = "LinkedIn URL must start with https://")
     private String linkedinUrl;
 
     @Schema(description = "GitHub profile URL")
+    @Size(max = 2048, message = "GitHub URL must not exceed 2048 characters")
+    @Pattern(regexp = "^https://.*", message = "GitHub URL must start with https://")
     private String githubUrl;
 
     @Schema(description = "Portfolio website URL")
+    @Size(max = 2048, message = "Portfolio URL must not exceed 2048 characters")
+    @Pattern(regexp = "^https://.*", message = "Portfolio URL must start with https://")
     private String portfolioUrl;
 
     @Schema(description = "User's physical location or address")

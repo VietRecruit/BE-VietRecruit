@@ -7,13 +7,23 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.springframework.util.SerializationUtils;
+import org.springframework.http.ResponseCookie;
+import org.springframework.security.jackson2.SecurityJackson2Modules;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class CookieUtils {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    static {
+        MAPPER.registerModules(
+                SecurityJackson2Modules.getModules(CookieUtils.class.getClassLoader()));
+    }
 
     public static Optional<Cookie> getCookie(HttpServletRequest request, String name) {
         Cookie[] cookies = request.getCookies();
@@ -30,11 +40,15 @@ public final class CookieUtils {
 
     public static void addCookie(
             HttpServletResponse response, String name, String value, int maxAge) {
-        Cookie cookie = new Cookie(name, value);
-        cookie.setPath("/");
-        cookie.setHttpOnly(true);
-        cookie.setMaxAge(maxAge);
-        response.addCookie(cookie);
+        ResponseCookie cookie =
+                ResponseCookie.from(name, value)
+                        .httpOnly(true)
+                        .secure(true)
+                        .sameSite("Lax")
+                        .path("/")
+                        .maxAge(maxAge)
+                        .build();
+        response.addHeader("Set-Cookie", cookie.toString());
     }
 
     public static void deleteCookie(
@@ -53,14 +67,21 @@ public final class CookieUtils {
         }
     }
 
-    @SuppressWarnings("deprecation")
     public static String serialize(Object object) {
-        return Base64.getUrlEncoder().encodeToString(SerializationUtils.serialize(object));
+        try {
+            byte[] bytes = MAPPER.writeValueAsBytes(object);
+            return Base64.getUrlEncoder().encodeToString(bytes);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to serialize object to JSON", e);
+        }
     }
 
-    @SuppressWarnings("deprecation")
     public static <T> T deserialize(Cookie cookie, Class<T> cls) {
-        return cls.cast(
-                SerializationUtils.deserialize(Base64.getUrlDecoder().decode(cookie.getValue())));
+        try {
+            byte[] bytes = Base64.getUrlDecoder().decode(cookie.getValue());
+            return MAPPER.readValue(bytes, cls);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to deserialize cookie value", e);
+        }
     }
 }

@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
+import com.vietrecruit.feature.ai.shared.config.VectorStoreProperties;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ public class EmbeddingService {
     private final VectorStore vectorStore;
     private final EmbeddingModel embeddingModel;
     private final StringRedisTemplate redisTemplate;
+    private final VectorStoreProperties vectorStoreProperties;
 
     private static final String CACHE_KEY_PREFIX = "ai:emb:";
     private static final long CACHE_TTL_HOURS = 24;
@@ -53,12 +55,22 @@ public class EmbeddingService {
 
     public List<Document> search(String query, int topK, Filter.Expression filter) {
         SearchRequest request =
-                SearchRequest.builder().query(query).topK(topK).filterExpression(filter).build();
+                SearchRequest.builder()
+                        .query(query)
+                        .topK(topK)
+                        .filterExpression(filter)
+                        .similarityThreshold(vectorStoreProperties.similarityThreshold())
+                        .build();
         return vectorStore.similaritySearch(request);
     }
 
     public List<Document> search(String query, int topK) {
-        SearchRequest request = SearchRequest.builder().query(query).topK(topK).build();
+        SearchRequest request =
+                SearchRequest.builder()
+                        .query(query)
+                        .topK(topK)
+                        .similarityThreshold(vectorStoreProperties.similarityThreshold())
+                        .build();
         return vectorStore.similaritySearch(request);
     }
 
