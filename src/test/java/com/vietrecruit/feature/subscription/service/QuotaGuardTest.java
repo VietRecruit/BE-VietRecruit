@@ -68,12 +68,14 @@ class QuotaGuardTest {
     }
 
     @Test
-    @DisplayName("Should atomically validate and increment with valid subscription and remaining quota")
+    @DisplayName(
+            "Should atomically validate and increment with valid subscription and remaining quota")
     void validateAndIncrementActiveJobs_Success() {
         when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(subscription));
         // atomicIncrementIfUnderLimit returns 1 → success
-        when(quotaRepository.atomicIncrementIfUnderLimit(subscription.getId(), plan.getMaxActiveJobs()))
+        when(quotaRepository.atomicIncrementIfUnderLimit(
+                        subscription.getId(), plan.getMaxActiveJobs()))
                 .thenReturn(1);
 
         assertDoesNotThrow(() -> quotaGuard.validateAndIncrementActiveJobs(companyId));
@@ -112,7 +114,8 @@ class QuotaGuardTest {
         when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(subscription));
         // 0 rows updated → limit already reached
-        when(quotaRepository.atomicIncrementIfUnderLimit(subscription.getId(), plan.getMaxActiveJobs()))
+        when(quotaRepository.atomicIncrementIfUnderLimit(
+                        subscription.getId(), plan.getMaxActiveJobs()))
                 .thenReturn(0);
 
         var ex =
@@ -123,7 +126,8 @@ class QuotaGuardTest {
     }
 
     @Test
-    @DisplayName("Unlimited plan (-1) — atomicIncrementIfUnderLimit is still called with -1 limit and must succeed")
+    @DisplayName(
+            "Unlimited plan (-1) — atomicIncrementIfUnderLimit is still called with -1 limit and must succeed")
     void validateAndIncrementActiveJobs_UnlimitedPlan() {
         plan.setMaxActiveJobs(-1);
         when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
@@ -138,11 +142,13 @@ class QuotaGuardTest {
     void validateAndIncrementActiveJobs_DbReturnsOneRow_success() {
         when(subscriptionRepository.findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(subscription));
-        when(quotaRepository.atomicIncrementIfUnderLimit(subscription.getId(), plan.getMaxActiveJobs()))
+        when(quotaRepository.atomicIncrementIfUnderLimit(
+                        subscription.getId(), plan.getMaxActiveJobs()))
                 .thenReturn(1);
 
         assertDoesNotThrow(() -> quotaGuard.validateAndIncrementActiveJobs(companyId));
-        verify(quotaRepository).atomicIncrementIfUnderLimit(subscription.getId(), plan.getMaxActiveJobs());
+        verify(quotaRepository)
+                .atomicIncrementIfUnderLimit(subscription.getId(), plan.getMaxActiveJobs());
     }
 
     @Test
