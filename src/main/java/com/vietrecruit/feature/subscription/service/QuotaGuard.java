@@ -41,8 +41,7 @@ public class QuotaGuard {
         if (updated == 0) {
             throw new ApiException(
                     ApiErrorCode.QUOTA_EXCEEDED,
-                    String.format(
-                            "Active job limit reached. Upgrade your plan for more."));
+                    String.format("Active job limit reached. Upgrade your plan for more."));
         }
     }
 

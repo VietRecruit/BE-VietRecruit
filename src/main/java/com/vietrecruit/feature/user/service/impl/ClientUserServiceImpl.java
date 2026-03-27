@@ -120,10 +120,7 @@ public class ClientUserServiceImpl implements ClientUserService {
                             try {
                                 storageService.delete(oldAvatarKey);
                             } catch (Exception e) {
-                                log.warn(
-                                        "Failed to delete old avatar: key={}",
-                                        oldAvatarKey,
-                                        e);
+                                log.warn("Failed to delete old avatar: key={}", oldAvatarKey, e);
                             }
                         }
                     });
@@ -221,10 +218,7 @@ public class ClientUserServiceImpl implements ClientUserService {
                             try {
                                 storageService.delete(oldBannerKey);
                             } catch (Exception e) {
-                                log.warn(
-                                        "Failed to delete old banner: key={}",
-                                        oldBannerKey,
-                                        e);
+                                log.warn("Failed to delete old banner: key={}", oldBannerKey, e);
                             }
                         }
                     });

@@ -6,14 +6,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-
-import org.springframework.dao.DataIntegrityViolationException;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.enums.EmailSenderAlias;
@@ -161,8 +160,9 @@ public class ApplicationServiceImpl implements ApplicationService {
         // Native query owns ORDER BY — strip sort from Pageable to prevent Spring Data
         // from appending `ORDER BY a.createdat` (Java field name, not SQL column name).
         var unsorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
-        var page = applicationRepository.findByCompanyFiltered(
-                companyId, jobId, status != null ? status.name() : null, unsorted);
+        var page =
+                applicationRepository.findByCompanyFiltered(
+                        companyId, jobId, status != null ? status.name() : null, unsorted);
         var content = page.getContent();
         var summaries = content.stream().map(applicationMapper::toSummaryResponse).toList();
         batchEnrichSummaries(summaries, content);

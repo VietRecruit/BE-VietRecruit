@@ -133,20 +133,19 @@ public class CandidateServiceImpl implements CandidateService {
             try {
                 storageService.delete(objectKey);
             } catch (Exception deleteEx) {
-                log.error("Compensation delete failed for key={}: {}", objectKey, deleteEx.getMessage());
+                log.error(
+                        "Compensation delete failed for key={}: {}",
+                        objectKey,
+                        deleteEx.getMessage());
             }
             throw e;
         }
 
         // Resolve email before afterCommit (session may be closed after commit)
         String candidateEmail =
-                userRepository
-                        .findById(candidate.getUserId())
-                        .map(u -> u.getEmail())
-                        .orElse(null);
+                userRepository.findById(candidate.getUserId()).map(u -> u.getEmail()).orElse(null);
         if (candidateEmail == null) {
-            log.error(
-                    "AI ingestion: cannot resolve email for candidateId={}", candidate.getId());
+            log.error("AI ingestion: cannot resolve email for candidateId={}", candidate.getId());
         }
 
         // Publish Kafka event only after transaction commits successfully

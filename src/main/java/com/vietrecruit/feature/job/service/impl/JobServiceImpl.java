@@ -91,8 +91,7 @@ public class JobServiceImpl implements JobService {
         cacheEventPublisher.publish("job", "published", saved.getId(), companyId);
         try {
             JobPublishedEvent event =
-                    new JobPublishedEvent(
-                            saved.getId(), saved.getCompanyId(), saved.getTitle());
+                    new JobPublishedEvent(saved.getId(), saved.getCompanyId(), saved.getTitle());
             kafkaTemplate
                     .send("ai.job-published", saved.getId().toString(), event)
                     .whenComplete(
