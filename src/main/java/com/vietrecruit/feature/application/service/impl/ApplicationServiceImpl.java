@@ -10,6 +10,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import org.springframework.dao.DataIntegrityViolationException;
 
@@ -109,7 +111,13 @@ public class ApplicationServiceImpl implements ApplicationService {
 
         insertHistory(application.getId(), null, ApplicationStatus.NEW, userId, null);
 
-        sendApplicationSubmittedNotification(job, candidate, userId);
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        sendApplicationSubmittedNotification(job, candidate, userId);
+                    }
+                });
 
         return enrichResponse(application, job, candidate, userId);
     }
