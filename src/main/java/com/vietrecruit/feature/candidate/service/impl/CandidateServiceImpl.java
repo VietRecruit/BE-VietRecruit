@@ -17,6 +17,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
@@ -125,32 +127,45 @@ public class CandidateServiceImpl implements CandidateService {
         candidate.setCvUploadedAt(now);
         candidateRepository.save(candidate);
 
-        try {
-            String candidateEmail =
-                    userRepository
-                            .findById(candidate.getUserId())
-                            .map(u -> u.getEmail())
-                            .orElse(null);
-            if (candidateEmail == null) {
-                log.error(
-                        "AI ingestion: cannot resolve email for candidateId={}", candidate.getId());
-            }
-            CvUploadedEvent event =
-                    new CvUploadedEvent(candidate.getId(), objectKey, candidateEmail);
-            kafkaTemplate
-                    .send("ai.cv-uploaded", candidate.getId().toString(), event)
-                    .whenComplete(
-                            (result, ex) -> {
-                                if (ex != null) {
-                                    log.warn(
-                                            "Failed to publish CV uploaded event: candidateId={}",
-                                            candidate.getId(),
-                                            ex);
-                                }
-                            });
-        } catch (Exception e) {
-            log.warn("Failed to publish CV uploaded event: candidateId={}", candidate.getId(), e);
+        // Resolve email before afterCommit (session may be closed after commit)
+        String candidateEmail =
+                userRepository
+                        .findById(candidate.getUserId())
+                        .map(u -> u.getEmail())
+                        .orElse(null);
+        if (candidateEmail == null) {
+            log.error(
+                    "AI ingestion: cannot resolve email for candidateId={}", candidate.getId());
         }
+
+        // Publish Kafka event only after transaction commits successfully
+        final UUID candidateId = candidate.getId();
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        try {
+                            CvUploadedEvent event =
+                                    new CvUploadedEvent(candidateId, objectKey, candidateEmail);
+                            kafkaTemplate
+                                    .send("ai.cv-uploaded", candidateId.toString(), event)
+                                    .whenComplete(
+                                            (result, ex) -> {
+                                                if (ex != null) {
+                                                    log.warn(
+                                                            "Failed to publish CV uploaded event: candidateId={}",
+                                                            candidateId,
+                                                            ex);
+                                                }
+                                            });
+                        } catch (Exception e) {
+                            log.warn(
+                                    "Failed to publish CV uploaded event: candidateId={}",
+                                    candidateId,
+                                    e);
+                        }
+                    }
+                });
 
         if (oldCvUrl != null) {
             String oldKey = extractObjectKey(oldCvUrl);
