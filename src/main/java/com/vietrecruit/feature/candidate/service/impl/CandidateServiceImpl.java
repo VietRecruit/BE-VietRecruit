@@ -88,7 +88,6 @@ public class CandidateServiceImpl implements CandidateService {
     @Override
     @Transactional
     @CircuitBreaker(name = "r2Storage", fallbackMethod = "uploadCvFallback")
-    @Retry(name = "r2Storage")
     public CvUploadResponse uploadCv(UUID userId, MultipartFile file) {
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
@@ -110,6 +109,7 @@ public class CandidateServiceImpl implements CandidateService {
         String objectKey =
                 String.format("candidates/%s/%s-%s", userId, UUID.randomUUID(), sanitizedFilename);
 
+        // Upload to R2 first (outside DB save try-catch for compensation)
         String publicUrl;
         try {
             publicUrl =
@@ -125,7 +125,19 @@ public class CandidateServiceImpl implements CandidateService {
         candidate.setCvContentType(contentType);
         candidate.setCvFileSizeBytes(file.getSize());
         candidate.setCvUploadedAt(now);
-        candidateRepository.save(candidate);
+
+        // DB save with compensation: delete R2 object if DB fails
+        try {
+            candidateRepository.save(candidate);
+        } catch (Exception e) {
+            log.error("DB save failed after R2 upload, compensating: key={}", objectKey);
+            try {
+                storageService.delete(objectKey);
+            } catch (Exception deleteEx) {
+                log.error("Compensation delete failed for key={}: {}", objectKey, deleteEx.getMessage());
+            }
+            throw e;
+        }
 
         // Resolve email before afterCommit (session may be closed after commit)
         String candidateEmail =
@@ -167,10 +179,21 @@ public class CandidateServiceImpl implements CandidateService {
                     }
                 });
 
+        // Delete old CV only after DB commit succeeds — prevents permanent loss on rollback
         if (oldCvUrl != null) {
             String oldKey = extractObjectKey(oldCvUrl);
             if (oldKey != null) {
-                storageService.delete(oldKey);
+                TransactionSynchronizationManager.registerSynchronization(
+                        new TransactionSynchronization() {
+                            @Override
+                            public void afterCommit() {
+                                try {
+                                    storageService.delete(oldKey);
+                                } catch (Exception e) {
+                                    log.warn("Failed to delete old CV: key={}", oldKey, e);
+                                }
+                            }
+                        });
             }
         }
 
