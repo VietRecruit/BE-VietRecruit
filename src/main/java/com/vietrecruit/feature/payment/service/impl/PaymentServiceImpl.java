@@ -31,6 +31,7 @@ import com.vietrecruit.feature.subscription.repository.SubscriptionPlanRepositor
 import com.vietrecruit.feature.subscription.service.SubscriptionService;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
@@ -89,6 +90,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional
+    @Retry(name = "payosPayment", fallbackMethod = "checkoutFallback")
     @CircuitBreaker(name = "payosPayment", fallbackMethod = "checkoutFallback")
     public CheckoutResponse initiateCheckout(UUID companyId, UUID planId, BillingCycle cycle) {
         var plan =
