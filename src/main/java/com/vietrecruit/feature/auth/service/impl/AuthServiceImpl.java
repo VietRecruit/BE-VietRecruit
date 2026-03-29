@@ -158,6 +158,9 @@ public class AuthServiceImpl implements AuthService {
             candidateRepository.save(Candidate.builder().userId(user.getId()).build());
         }
 
+        // OTP stored before commit: if the transaction rolls back, Redis holds an orphan OTP
+        // that references a non-existent user. Accepted risk — verifyOtp will fail with
+        // AUTH_OTP_EXPIRED when the user lookup returns empty, and the OTP self-expires in 10 min.
         String otpCode = generateOtp();
         authCacheService.storeOtp(request.getEmail(), otpCode, user.getId(), OTP_TTL_SECONDS);
         authCacheService.setCooldown(request.getEmail(), OTP_COOLDOWN_SECONDS);
