@@ -87,6 +87,9 @@ public class CandidateSearchServiceImpl implements CandidateSearchService {
         } catch (IOException e) {
             log.error("Candidate search failed: {}", e.getMessage(), e);
             return emptyResponse(request.getPage(), request.getSize());
+        } catch (RuntimeException e) {
+            log.error("Candidate search failed (transport/runtime): {}", e.getMessage(), e);
+            return emptyResponse(request.getPage(), request.getSize());
         }
     }
 

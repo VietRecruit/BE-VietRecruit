@@ -90,6 +90,9 @@ public class JobSearchServiceImpl implements JobSearchService {
         } catch (IOException e) {
             log.error("Job search failed: {}", e.getMessage(), e);
             return emptyResponse(request.getPage(), request.getSize());
+        } catch (RuntimeException e) {
+            log.error("Job search failed (transport/runtime): {}", e.getMessage(), e);
+            return emptyResponse(request.getPage(), request.getSize());
         }
     }
 
