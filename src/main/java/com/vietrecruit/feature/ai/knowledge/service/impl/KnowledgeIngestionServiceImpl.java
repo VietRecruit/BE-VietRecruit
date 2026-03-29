@@ -155,22 +155,43 @@ public class KnowledgeIngestionServiceImpl implements KnowledgeIngestionService 
                                                 ApiErrorCode.NOT_FOUND,
                                                 "Knowledge document not found"));
 
-        if (doc.getFileKey() != null) {
-            try {
-                storageService.delete(doc.getFileKey());
-            } catch (Exception e) {
-                log.warn(
-                        "Failed to delete R2 file for knowledge doc: id={}, key={}, error={}",
-                        documentId,
-                        doc.getFileKey(),
-                        e.getMessage());
-            }
-        }
+        final String fileKey = doc.getFileKey();
+        final String docTitle = doc.getTitle();
 
-        embeddingService.deleteByMetadata("knowledgeDocumentId", documentId.toString());
+        // 1. DB delete first (in transaction) — if this fails, nothing else is touched
         repository.delete(doc);
 
-        log.info("Knowledge document deleted: id={}, title={}", documentId, doc.getTitle());
+        // 2. pgvector and R2 cleanup after commit to avoid inconsistency on rollback
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        try {
+                            embeddingService.deleteByMetadata(
+                                    "knowledgeDocumentId", documentId.toString());
+                        } catch (Exception e) {
+                            log.warn(
+                                    "Failed to delete pgvector embeddings for knowledge doc:"
+                                            + " id={}, error={}",
+                                    documentId,
+                                    e.getMessage());
+                        }
+                        if (fileKey != null) {
+                            try {
+                                storageService.delete(fileKey);
+                            } catch (Exception e) {
+                                log.warn(
+                                        "Failed to delete R2 file for knowledge doc: id={},"
+                                                + " key={}, error={}",
+                                        documentId,
+                                        fileKey,
+                                        e.getMessage());
+                            }
+                        }
+                    }
+                });
+
+        log.info("Knowledge document deleted: id={}, title={}", documentId, docTitle);
     }
 
     @Override
