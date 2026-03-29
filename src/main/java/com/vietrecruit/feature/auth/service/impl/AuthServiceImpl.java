@@ -554,9 +554,17 @@ public class AuthServiceImpl implements AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
-        authCacheService.deleteResetToken(email);
         refreshTokenRepository.revokeAllByUserId(user.getId());
-        authCacheService.evictUser(user.getId());
+
+        final java.util.UUID userId = user.getId();
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        authCacheService.deleteResetToken(email);
+                        authCacheService.evictUser(userId);
+                    }
+                });
 
         log.info("Password reset completed for user: {}. All sessions revoked.", user.getId());
     }
