@@ -21,6 +21,7 @@ import com.vietrecruit.common.config.kafka.KafkaTopicNames;
 import com.vietrecruit.feature.company.document.CompanyDocument;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -63,6 +64,15 @@ public class CompanySyncConsumer {
             }
 
             upsertToIndex(id, payload);
+        } catch (ElasticsearchException e) {
+            if (e.status() >= 400 && e.status() < 500) {
+                log.error(
+                        "Permanent ES error (HTTP {}) for CDC company record, skipping: {}",
+                        e.status(),
+                        e.getMessage());
+                return;
+            }
+            throw new RuntimeException("ES sync failed for company record", e);
         } catch (IOException e) {
             log.error("Failed to process CDC company record: {}", e.getMessage(), e);
             throw new RuntimeException("ES sync failed for company record", e);
