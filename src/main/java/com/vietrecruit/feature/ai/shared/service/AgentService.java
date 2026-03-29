@@ -82,8 +82,7 @@ public class AgentService {
             }
 
             if (response == null || response.isBlank()) {
-                log.warn(
-                        "Agent returned null or empty response: sessionId={}", sessionId);
+                log.warn("Agent returned null or empty response: sessionId={}", sessionId);
                 return "The AI assistant could not generate a response. Please try again.";
             }
 

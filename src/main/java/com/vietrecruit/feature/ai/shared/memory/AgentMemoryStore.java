@@ -2,14 +2,12 @@ package com.vietrecruit.feature.ai.shared.memory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
@@ -37,15 +35,15 @@ public class AgentMemoryStore {
     private static final DefaultRedisScript<Void> APPEND_SCRIPT =
             new DefaultRedisScript<>(
                     """
-                    local key = KEYS[1]
-                    local msg = ARGV[1]
-                    local max_size = tonumber(ARGV[2])
-                    local ttl = tonumber(ARGV[3])
-                    redis.call('RPUSH', key, msg)
-                    redis.call('LTRIM', key, -max_size, -1)
-                    redis.call('EXPIRE', key, ttl)
-                    return nil
-                    """,
+					local key = KEYS[1]
+					local msg = ARGV[1]
+					local max_size = tonumber(ARGV[2])
+					local ttl = tonumber(ARGV[3])
+					redis.call('RPUSH', key, msg)
+					redis.call('LTRIM', key, -max_size, -1)
+					redis.call('EXPIRE', key, ttl)
+					return nil
+					""",
                     Void.class);
 
     public void append(String userId, String sessionId, String role, String content) {
