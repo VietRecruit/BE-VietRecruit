@@ -1,8 +1,10 @@
 package com.vietrecruit.feature.ai.shared.memory;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
@@ -58,12 +60,20 @@ public class AgentMemoryStore {
                     String.valueOf(TTL_SECONDS));
         } catch (JsonProcessingException e) {
             log.error("Failed to serialize agent memory message: sessionId={}", sessionId, e);
+        } catch (DataAccessException e) {
+            log.warn("Redis unavailable for agent memory append: sessionId={}", sessionId, e);
         }
     }
 
     public List<ChatMessage> getHistory(String userId, String sessionId) {
         String key = KEY_PREFIX + userId + ":" + sessionId;
-        List<String> entries = redisTemplate.opsForList().range(key, 0, -1);
+        List<String> entries;
+        try {
+            entries = redisTemplate.opsForList().range(key, 0, -1);
+        } catch (DataAccessException e) {
+            log.warn("Redis unavailable for agent memory read: sessionId={}", sessionId, e);
+            return Collections.emptyList();
+        }
         if (entries == null || entries.isEmpty()) {
             return new ArrayList<>();
         }
@@ -83,7 +93,11 @@ public class AgentMemoryStore {
 
     public void clear(String userId, String sessionId) {
         String key = KEY_PREFIX + userId + ":" + sessionId;
-        redisTemplate.delete(key);
+        try {
+            redisTemplate.delete(key);
+        } catch (DataAccessException e) {
+            log.warn("Redis unavailable for agent memory clear: sessionId={}", sessionId, e);
+        }
     }
 
     public record ChatMessage(String role, String content) {}
