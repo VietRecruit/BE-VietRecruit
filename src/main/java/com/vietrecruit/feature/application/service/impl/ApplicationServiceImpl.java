@@ -10,6 +10,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -256,6 +257,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     // ── Internal helpers ───────────────────────────────────────────────
 
     @Override
+    @Transactional(propagation = Propagation.MANDATORY)
     public void insertHistory(
             UUID applicationId,
             ApplicationStatus oldStatus,
