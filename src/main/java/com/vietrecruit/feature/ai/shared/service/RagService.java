@@ -33,6 +33,9 @@ public class RagService {
         this.embeddingService = embeddingService;
     }
 
+    // ~4 chars per token; 12_000 tokens ≈ 48_000 chars budget for context documents
+    private static final int MAX_CONTEXT_CHARS = 48_000;
+
     @Retry(name = "openaiApi")
     @CircuitBreaker(name = "openaiApi", fallbackMethod = "generateFallback")
     public String generate(String userQuery, String systemContext, int topK) {
@@ -45,8 +48,12 @@ public class RagService {
         List<Document> relevantDocs = embeddingService.search(userQuery, topK, typeFilter);
 
         StringBuilder contextBlock = new StringBuilder();
-        for (int i = 0; i < relevantDocs.size(); i++) {
+        int charBudget = MAX_CONTEXT_CHARS;
+        for (int i = 0; i < relevantDocs.size() && charBudget > 0; i++) {
             String sanitized = sanitizeDocumentText(relevantDocs.get(i).getText());
+            if (sanitized.length() > charBudget) {
+                sanitized = sanitized.substring(0, charBudget);
+            }
             contextBlock
                     .append("<context_document index=\"")
                     .append(i + 1)
@@ -54,6 +61,7 @@ public class RagService {
                     .append(sanitized)
                     .append("\n")
                     .append("</context_document>\n");
+            charBudget -= sanitized.length();
         }
 
         String augmentedPrompt =
