@@ -348,7 +348,8 @@ public class InterviewQuestionServiceImpl implements InterviewQuestionService {
             return objectMapper.readValue(
                     stored.getQuestionsJson(), new TypeReference<List<InterviewQuestion>>() {});
         } catch (Exception e) {
-            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "Failed to parse AI-generated questions");
+            throw new ApiException(
+                    ApiErrorCode.INTERNAL_ERROR, "Failed to parse AI-generated questions");
         }
     }
 

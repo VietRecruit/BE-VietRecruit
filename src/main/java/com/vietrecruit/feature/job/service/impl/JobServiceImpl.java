@@ -20,6 +20,7 @@ import com.vietrecruit.common.config.cache.CacheNames;
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.ai.shared.event.JobPublishedEvent;
+import com.vietrecruit.feature.department.repository.DepartmentRepository;
 import com.vietrecruit.feature.job.dto.request.JobCreateRequest;
 import com.vietrecruit.feature.job.dto.request.JobUpdateRequest;
 import com.vietrecruit.feature.job.entity.Job;
@@ -28,7 +29,6 @@ import com.vietrecruit.feature.job.mapper.JobMapper;
 import com.vietrecruit.feature.job.repository.JobRepository;
 import com.vietrecruit.feature.job.repository.JobSpecification;
 import com.vietrecruit.feature.job.service.JobService;
-import com.vietrecruit.feature.department.repository.DepartmentRepository;
 import com.vietrecruit.feature.subscription.service.QuotaGuard;
 
 import lombok.RequiredArgsConstructor;
@@ -52,8 +52,7 @@ public class JobServiceImpl implements JobService {
     public Job createJob(UUID companyId, UUID createdBy, JobCreateRequest request) {
         if (request.getDepartmentId() != null) {
             departmentRepository
-                    .findByIdAndCompanyIdAndDeletedAtIsNull(
-                            request.getDepartmentId(), companyId)
+                    .findByIdAndCompanyIdAndDeletedAtIsNull(request.getDepartmentId(), companyId)
                     .orElseThrow(
                             () ->
                                     new ApiException(

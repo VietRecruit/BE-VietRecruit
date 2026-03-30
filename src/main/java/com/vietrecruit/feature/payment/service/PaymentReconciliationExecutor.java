@@ -37,8 +37,7 @@ public class PaymentReconciliationExecutor {
             tx.setStatus(PaymentStatus.PAID);
             tx.setPaidAt(Instant.now());
             paymentTransactionRepository.save(tx);
-            log.info(
-                    "Reconciliation: orderCode={} confirmed PAID by PayOS", tx.getOrderCode());
+            log.info("Reconciliation: orderCode={} confirmed PAID by PayOS", tx.getOrderCode());
 
             try {
                 paymentService.activateAfterPayment(tx.getOrderCode());
@@ -48,17 +47,13 @@ public class PaymentReconciliationExecutor {
                         tx.getOrderCode(),
                         e);
             }
-        } else if (status == PaymentLinkStatus.CANCELLED
-                || status == PaymentLinkStatus.EXPIRED) {
+        } else if (status == PaymentLinkStatus.CANCELLED || status == PaymentLinkStatus.EXPIRED) {
             tx.setStatus(
                     status == PaymentLinkStatus.EXPIRED
                             ? PaymentStatus.EXPIRED
                             : PaymentStatus.CANCELLED);
             paymentTransactionRepository.save(tx);
-            log.info(
-                    "Reconciliation: orderCode={} is {} on PayOS",
-                    tx.getOrderCode(),
-                    status);
+            log.info("Reconciliation: orderCode={} is {} on PayOS", tx.getOrderCode(), status);
         } else {
             log.debug(
                     "Reconciliation: orderCode={} still {} on PayOS, skipping",

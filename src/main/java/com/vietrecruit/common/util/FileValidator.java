@@ -15,8 +15,8 @@ import com.vietrecruit.common.exception.ApiException;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Validates uploaded files using magic-byte signatures and Apache Tika content detection rather than
- * trusting Content-Type headers.
+ * Validates uploaded files using magic-byte signatures and Apache Tika content detection rather
+ * than trusting Content-Type headers.
  */
 @Slf4j
 @Component
