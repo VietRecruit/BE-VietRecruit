@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class CompanyServiceImpl implements CompanyService {
 
     private final CompanyRepository companyRepository;
@@ -57,7 +58,6 @@ public class CompanyServiceImpl implements CompanyService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     @org.springframework.cache.annotation.Cacheable(
             value = com.vietrecruit.common.config.cache.CacheNames.COMPANY_DETAIL,
             key = "#companyId")

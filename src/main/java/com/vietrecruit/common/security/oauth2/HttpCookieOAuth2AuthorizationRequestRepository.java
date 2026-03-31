@@ -67,7 +67,9 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
     @Override
     public OAuth2AuthorizationRequest removeAuthorizationRequest(
             HttpServletRequest request, HttpServletResponse response) {
-        return loadAuthorizationRequest(request);
+        OAuth2AuthorizationRequest authRequest = loadAuthorizationRequest(request);
+        removeAuthorizationRequestCookies(request, response);
+        return authRequest;
     }
 
     public void removeAuthorizationRequestCookies(

@@ -27,6 +27,7 @@ import com.vietrecruit.feature.job.document.JobDocument;
 import com.vietrecruit.feature.location.repository.LocationRepository;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -103,6 +104,15 @@ public class JobSyncConsumer {
             }
 
             upsertToIndex(id, payload);
+        } catch (ElasticsearchException e) {
+            if (e.status() >= 400 && e.status() < 500) {
+                log.error(
+                        "Permanent ES error (HTTP {}) for CDC job record, skipping: {}",
+                        e.status(),
+                        e.getMessage());
+                return;
+            }
+            throw new RuntimeException("ES sync failed for job record", e);
         } catch (IOException e) {
             log.error("Failed to process CDC job record: {}", e.getMessage(), e);
             throw new RuntimeException("ES sync failed for job record", e);

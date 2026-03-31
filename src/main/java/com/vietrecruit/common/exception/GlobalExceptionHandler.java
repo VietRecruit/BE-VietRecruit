@@ -19,6 +19,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.response.ApiResponse;
+import com.vietrecruit.feature.payment.exception.WebhookVerificationException;
 
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import lombok.extern.slf4j.Slf4j;
@@ -92,6 +93,13 @@ public class GlobalExceptionHandler {
             MaxUploadSizeExceededException ex) {
         return buildErrorResponse(
                 ApiErrorCode.FILE_TOO_LARGE, ApiErrorCode.FILE_TOO_LARGE.getDefaultMessage(), null);
+    }
+
+    @ExceptionHandler(WebhookVerificationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleWebhookVerification(
+            WebhookVerificationException ex) {
+        log.warn("Webhook verification failed: {}", ex.getMessage());
+        return buildErrorResponse(ApiErrorCode.UNAUTHORIZED, "Webhook verification failed", null);
     }
 
     @ExceptionHandler({
