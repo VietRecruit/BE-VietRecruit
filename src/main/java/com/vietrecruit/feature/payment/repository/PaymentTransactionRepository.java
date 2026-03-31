@@ -5,7 +5,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import jakarta.persistence.LockModeType;
+
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -16,9 +19,10 @@ import com.vietrecruit.feature.payment.enums.PaymentStatus;
 @Repository
 public interface PaymentTransactionRepository extends JpaRepository<PaymentTransaction, UUID> {
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<PaymentTransaction> findByOrderCode(Long orderCode);
 
-    Optional<PaymentTransaction> findByCompanyIdAndStatus(UUID companyId, PaymentStatus status);
+    List<PaymentTransaction> findByCompanyIdAndStatus(UUID companyId, PaymentStatus status);
 
     @Query(
             """
@@ -46,11 +50,12 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
                     """
 			SELECT pt.* FROM payment_transactions pt
 			WHERE pt.status = 'PAID'
+			AND pt.updated_at > :cutoff
 			AND pt.company_id NOT IN (
 				SELECT es.company_id FROM employer_subscriptions es
 				WHERE es.status = 'ACTIVE'
 			)
 			""",
             nativeQuery = true)
-    List<PaymentTransaction> findPaidWithoutActiveSubscription();
+    List<PaymentTransaction> findPaidWithoutActiveSubscription(@Param("cutoff") Instant cutoff);
 }

@@ -15,9 +15,11 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.response.ApiResponse;
+import com.vietrecruit.feature.payment.exception.WebhookVerificationException;
 
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import lombok.extern.slf4j.Slf4j;
@@ -84,6 +86,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException ex) {
         return buildErrorResponse(ApiErrorCode.FORBIDDEN, ex.getMessage(), null);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMaxUploadSizeExceeded(
+            MaxUploadSizeExceededException ex) {
+        return buildErrorResponse(
+                ApiErrorCode.FILE_TOO_LARGE, ApiErrorCode.FILE_TOO_LARGE.getDefaultMessage(), null);
+    }
+
+    @ExceptionHandler(WebhookVerificationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleWebhookVerification(
+            WebhookVerificationException ex) {
+        log.warn("Webhook verification failed: {}", ex.getMessage());
+        return buildErrorResponse(ApiErrorCode.UNAUTHORIZED, "Webhook verification failed", null);
     }
 
     @ExceptionHandler({

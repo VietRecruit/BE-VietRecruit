@@ -11,12 +11,13 @@ import java.util.UUID;
 
 import jakarta.persistence.criteria.Predicate;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
@@ -35,7 +36,6 @@ import com.vietrecruit.feature.candidate.service.CandidateService;
 import com.vietrecruit.feature.user.repository.UserRepository;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
-import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -86,7 +86,6 @@ public class CandidateServiceImpl implements CandidateService {
     @Override
     @Transactional
     @CircuitBreaker(name = "r2Storage", fallbackMethod = "uploadCvFallback")
-    @Retry(name = "r2Storage")
     public CvUploadResponse uploadCv(UUID userId, MultipartFile file) {
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
@@ -108,6 +107,7 @@ public class CandidateServiceImpl implements CandidateService {
         String objectKey =
                 String.format("candidates/%s/%s-%s", userId, UUID.randomUUID(), sanitizedFilename);
 
+        // Upload to R2 first (outside DB save try-catch for compensation)
         String publicUrl;
         try {
             publicUrl =
@@ -123,39 +123,74 @@ public class CandidateServiceImpl implements CandidateService {
         candidate.setCvContentType(contentType);
         candidate.setCvFileSizeBytes(file.getSize());
         candidate.setCvUploadedAt(now);
-        candidateRepository.save(candidate);
 
+        // DB save with compensation: delete R2 object if DB fails
         try {
-            String candidateEmail =
-                    userRepository
-                            .findById(candidate.getUserId())
-                            .map(u -> u.getEmail())
-                            .orElse(null);
-            if (candidateEmail == null) {
-                log.error(
-                        "AI ingestion: cannot resolve email for candidateId={}", candidate.getId());
-            }
-            CvUploadedEvent event =
-                    new CvUploadedEvent(candidate.getId(), objectKey, candidateEmail);
-            kafkaTemplate
-                    .send("ai.cv-uploaded", candidate.getId().toString(), event)
-                    .whenComplete(
-                            (result, ex) -> {
-                                if (ex != null) {
-                                    log.warn(
-                                            "Failed to publish CV uploaded event: candidateId={}",
-                                            candidate.getId(),
-                                            ex);
-                                }
-                            });
+            candidateRepository.save(candidate);
         } catch (Exception e) {
-            log.warn("Failed to publish CV uploaded event: candidateId={}", candidate.getId(), e);
+            log.error("DB save failed after R2 upload, compensating: key={}", objectKey);
+            try {
+                storageService.delete(objectKey);
+            } catch (Exception deleteEx) {
+                log.error(
+                        "Compensation delete failed for key={}: {}",
+                        objectKey,
+                        deleteEx.getMessage());
+            }
+            throw e;
         }
 
+        // Resolve email before afterCommit (session may be closed after commit)
+        String candidateEmail =
+                userRepository.findById(candidate.getUserId()).map(u -> u.getEmail()).orElse(null);
+        if (candidateEmail == null) {
+            log.error("AI ingestion: cannot resolve email for candidateId={}", candidate.getId());
+        }
+
+        // Publish Kafka event only after transaction commits successfully
+        final UUID candidateId = candidate.getId();
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        try {
+                            CvUploadedEvent event =
+                                    new CvUploadedEvent(candidateId, objectKey, candidateEmail);
+                            kafkaTemplate
+                                    .send("ai.cv-uploaded", candidateId.toString(), event)
+                                    .whenComplete(
+                                            (result, ex) -> {
+                                                if (ex != null) {
+                                                    log.warn(
+                                                            "Failed to publish CV uploaded event: candidateId={}",
+                                                            candidateId,
+                                                            ex);
+                                                }
+                                            });
+                        } catch (Exception e) {
+                            log.warn(
+                                    "Failed to publish CV uploaded event: candidateId={}",
+                                    candidateId,
+                                    e);
+                        }
+                    }
+                });
+
+        // Delete old CV only after DB commit succeeds — prevents permanent loss on rollback
         if (oldCvUrl != null) {
             String oldKey = extractObjectKey(oldCvUrl);
             if (oldKey != null) {
-                storageService.delete(oldKey);
+                TransactionSynchronizationManager.registerSynchronization(
+                        new TransactionSynchronization() {
+                            @Override
+                            public void afterCommit() {
+                                try {
+                                    storageService.delete(oldKey);
+                                } catch (Exception e) {
+                                    log.warn("Failed to delete old CV: key={}", oldKey, e);
+                                }
+                            }
+                        });
             }
         }
 
@@ -257,50 +292,49 @@ public class CandidateServiceImpl implements CandidateService {
     @Override
     public List<CandidateSearchResult> searchCandidates(
             String skills, String desiredPosition, Short minYearsExperience, int limit) {
-        Specification<Candidate> spec =
-                (root, query, cb) -> {
-                    List<Predicate> predicates = new ArrayList<>();
-                    predicates.add(cb.isNull(root.get("deletedAt")));
-                    predicates.add(cb.equal(root.get("isOpenToWork"), true));
-
-                    if (desiredPosition != null && !desiredPosition.isBlank()) {
-                        predicates.add(
-                                cb.like(
-                                        cb.lower(root.get("desiredPosition")),
-                                        "%" + desiredPosition.toLowerCase() + "%"));
-                    }
-                    if (minYearsExperience != null) {
-                        predicates.add(
-                                cb.greaterThanOrEqualTo(
-                                        root.get("yearsOfExperience"), minYearsExperience));
-                    }
-
-                    return cb.and(predicates.toArray(new Predicate[0]));
-                };
-
-        Page<Candidate> page = candidateRepository.findAll(spec, PageRequest.of(0, limit));
-        var stream = page.getContent().stream();
+        List<Candidate> candidates;
 
         if (skills != null && !skills.isBlank()) {
-            String[] requiredSkills =
+            // Push skill filter to DB to avoid post-pagination under-return
+            List<String> requiredSkills =
                     Arrays.stream(skills.split(","))
                             .map(String::trim)
                             .map(String::toLowerCase)
-                            .toArray(String[]::new);
-            stream =
-                    stream.filter(
-                            c -> {
-                                if (c.getSkills() == null) return false;
-                                List<String> candidateSkills =
-                                        Arrays.stream(c.getSkills())
-                                                .map(String::toLowerCase)
-                                                .toList();
-                                return Arrays.stream(requiredSkills)
-                                        .anyMatch(candidateSkills::contains);
-                            });
+                            .filter(s -> !s.isEmpty())
+                            .toList();
+            String positionPattern =
+                    (desiredPosition != null && !desiredPosition.isBlank())
+                            ? "%" + desiredPosition.toLowerCase() + "%"
+                            : null;
+            candidates =
+                    candidateRepository.findBySkillsFilter(
+                            positionPattern, minYearsExperience, requiredSkills, limit);
+        } else {
+            Specification<Candidate> spec =
+                    (root, query, cb) -> {
+                        List<Predicate> predicates = new ArrayList<>();
+                        predicates.add(cb.isNull(root.get("deletedAt")));
+                        predicates.add(cb.equal(root.get("isOpenToWork"), true));
+
+                        if (desiredPosition != null && !desiredPosition.isBlank()) {
+                            predicates.add(
+                                    cb.like(
+                                            cb.lower(root.get("desiredPosition")),
+                                            "%" + desiredPosition.toLowerCase() + "%"));
+                        }
+                        if (minYearsExperience != null) {
+                            predicates.add(
+                                    cb.greaterThanOrEqualTo(
+                                            root.get("yearsOfExperience"), minYearsExperience));
+                        }
+
+                        return cb.and(predicates.toArray(new Predicate[0]));
+                    };
+            candidates = candidateRepository.findAll(spec, PageRequest.of(0, limit)).getContent();
         }
 
-        return stream.map(
+        return candidates.stream()
+                .map(
                         c ->
                                 new CandidateSearchResult(
                                         c.getId(),
@@ -322,50 +356,53 @@ public class CandidateServiceImpl implements CandidateService {
             return List.of();
         }
 
-        Specification<Candidate> spec =
-                (root, query, cb) -> {
-                    List<Predicate> predicates = new ArrayList<>();
-                    predicates.add(cb.isNull(root.get("deletedAt")));
-                    predicates.add(root.get("id").in(applicantIds));
-
-                    if (desiredPosition != null && !desiredPosition.isBlank()) {
-                        predicates.add(
-                                cb.like(
-                                        cb.lower(root.get("desiredPosition")),
-                                        "%" + desiredPosition.toLowerCase() + "%"));
-                    }
-                    if (minYearsExperience != null) {
-                        predicates.add(
-                                cb.greaterThanOrEqualTo(
-                                        root.get("yearsOfExperience"), minYearsExperience));
-                    }
-
-                    return cb.and(predicates.toArray(new Predicate[0]));
-                };
-
-        Page<Candidate> page = candidateRepository.findAll(spec, PageRequest.of(0, limit));
-        var stream = page.getContent().stream();
+        List<Candidate> candidates;
 
         if (skills != null && !skills.isBlank()) {
-            String[] requiredSkills =
+            // Push skill filter to DB to avoid post-pagination under-return
+            List<String> requiredSkills =
                     Arrays.stream(skills.split(","))
                             .map(String::trim)
                             .map(String::toLowerCase)
-                            .toArray(String[]::new);
-            stream =
-                    stream.filter(
-                            c -> {
-                                if (c.getSkills() == null) return false;
-                                List<String> candidateSkills =
-                                        Arrays.stream(c.getSkills())
-                                                .map(String::toLowerCase)
-                                                .toList();
-                                return Arrays.stream(requiredSkills)
-                                        .anyMatch(candidateSkills::contains);
-                            });
+                            .filter(s -> !s.isEmpty())
+                            .toList();
+            String positionPattern =
+                    (desiredPosition != null && !desiredPosition.isBlank())
+                            ? "%" + desiredPosition.toLowerCase() + "%"
+                            : null;
+            candidates =
+                    candidateRepository.findBySkillsFilterForCompany(
+                            positionPattern,
+                            minYearsExperience,
+                            requiredSkills,
+                            applicantIds,
+                            limit);
+        } else {
+            Specification<Candidate> spec =
+                    (root, query, cb) -> {
+                        List<Predicate> predicates = new ArrayList<>();
+                        predicates.add(cb.isNull(root.get("deletedAt")));
+                        predicates.add(root.get("id").in(applicantIds));
+
+                        if (desiredPosition != null && !desiredPosition.isBlank()) {
+                            predicates.add(
+                                    cb.like(
+                                            cb.lower(root.get("desiredPosition")),
+                                            "%" + desiredPosition.toLowerCase() + "%"));
+                        }
+                        if (minYearsExperience != null) {
+                            predicates.add(
+                                    cb.greaterThanOrEqualTo(
+                                            root.get("yearsOfExperience"), minYearsExperience));
+                        }
+
+                        return cb.and(predicates.toArray(new Predicate[0]));
+                    };
+            candidates = candidateRepository.findAll(spec, PageRequest.of(0, limit)).getContent();
         }
 
-        return stream.map(
+        return candidates.stream()
+                .map(
                         c ->
                                 new CandidateSearchResult(
                                         c.getId(),

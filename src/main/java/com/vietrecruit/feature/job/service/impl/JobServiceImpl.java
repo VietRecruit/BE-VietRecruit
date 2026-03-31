@@ -20,6 +20,7 @@ import com.vietrecruit.common.config.cache.CacheNames;
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.ai.shared.event.JobPublishedEvent;
+import com.vietrecruit.feature.department.repository.DepartmentRepository;
 import com.vietrecruit.feature.job.dto.request.JobCreateRequest;
 import com.vietrecruit.feature.job.dto.request.JobUpdateRequest;
 import com.vietrecruit.feature.job.entity.Job;
@@ -44,10 +45,21 @@ public class JobServiceImpl implements JobService {
     private final QuotaGuard quotaGuard;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final CacheEventPublisher cacheEventPublisher;
+    private final DepartmentRepository departmentRepository;
 
     @Override
     @Transactional
     public Job createJob(UUID companyId, UUID createdBy, JobCreateRequest request) {
+        if (request.getDepartmentId() != null) {
+            departmentRepository
+                    .findByIdAndCompanyIdAndDeletedAtIsNull(request.getDepartmentId(), companyId)
+                    .orElseThrow(
+                            () ->
+                                    new ApiException(
+                                            ApiErrorCode.DEPARTMENT_NOT_FOUND,
+                                            "Department not found or does not belong to your company"));
+        }
+
         var job = jobMapper.toEntity(request);
         job.setCompanyId(companyId);
         job.setCreatedBy(createdBy);
@@ -81,51 +93,32 @@ public class JobServiceImpl implements JobService {
             throw new ApiException(ApiErrorCode.BAD_REQUEST, "Only DRAFT jobs can be published");
         }
 
-        // Retry quota operations on optimistic lock failure (max 3 attempts)
-        int maxAttempts = 3;
-        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-            try {
-                quotaGuard.validateCanPublishJob(companyId);
-                quotaGuard.incrementActiveJobs(companyId);
-                job.setStatus(JobStatus.PUBLISHED);
-                job.setPublishedAt(java.time.Instant.now());
-                var saved = jobRepository.save(job);
-                log.info("Published job id={} company={}", jobId, companyId);
-                cacheEventPublisher.publish("job", "published", saved.getId(), companyId);
-                try {
-                    JobPublishedEvent event =
-                            new JobPublishedEvent(
-                                    saved.getId(), saved.getCompanyId(), saved.getTitle());
-                    kafkaTemplate
-                            .send("ai.job-published", saved.getId().toString(), event)
-                            .whenComplete(
-                                    (res, ex) -> {
-                                        if (ex != null) {
-                                            log.warn(
-                                                    "Failed to publish job published event: jobId={}",
-                                                    saved.getId(),
-                                                    ex);
-                                        }
-                                    });
-                } catch (Exception e) {
-                    log.warn("Failed to publish job published event: jobId={}", saved.getId(), e);
-                }
-                return saved;
-            } catch (ApiException e) {
-                if (ApiErrorCode.CONFLICT.equals(e.getErrorCode()) && attempt < maxAttempts) {
-                    log.warn(
-                            "Quota optimistic lock retry attempt {}/{} for job={}",
-                            attempt,
-                            maxAttempts,
-                            jobId);
-                    continue;
-                }
-                throw e;
-            }
+        // Atomic validate + increment — single DB UPDATE, no TOCTOU race
+        quotaGuard.validateAndIncrementActiveJobs(companyId);
+
+        job.setStatus(JobStatus.PUBLISHED);
+        job.setPublishedAt(java.time.Instant.now());
+        var saved = jobRepository.save(job);
+        log.info("Published job id={} company={}", jobId, companyId);
+        cacheEventPublisher.publish("job", "published", saved.getId(), companyId);
+        try {
+            JobPublishedEvent event =
+                    new JobPublishedEvent(saved.getId(), saved.getCompanyId(), saved.getTitle());
+            kafkaTemplate
+                    .send("ai.job-published", saved.getId().toString(), event)
+                    .whenComplete(
+                            (res, ex) -> {
+                                if (ex != null) {
+                                    log.warn(
+                                            "Failed to publish job published event: jobId={}",
+                                            saved.getId(),
+                                            ex);
+                                }
+                            });
+        } catch (Exception e) {
+            log.warn("Failed to publish job published event: jobId={}", saved.getId(), e);
         }
-        // Unreachable — loop always returns or throws
-        throw new ApiException(
-                ApiErrorCode.INTERNAL_ERROR, "Failed to publish job after retry exhaustion");
+        return saved;
     }
 
     @Override

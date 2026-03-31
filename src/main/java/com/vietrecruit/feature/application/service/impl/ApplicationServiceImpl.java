@@ -6,9 +6,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.enums.EmailSenderAlias;
@@ -84,7 +89,8 @@ public class ApplicationServiceImpl implements ApplicationService {
                                 request.getJobId(), JobStatus.PUBLISHED)
                         .orElseThrow(() -> new ApiException(ApiErrorCode.JOB_NOT_PUBLISHED));
 
-        if (applicationRepository.existsByJobIdAndCandidateId(job.getId(), candidate.getId())) {
+        if (applicationRepository.existsByJobIdAndCandidateIdAndDeletedAtIsNull(
+                job.getId(), candidate.getId())) {
             throw new ApiException(ApiErrorCode.APPLICATION_DUPLICATE);
         }
 
@@ -97,11 +103,21 @@ public class ApplicationServiceImpl implements ApplicationService {
                         .status(ApplicationStatus.NEW)
                         .build();
 
-        application = applicationRepository.save(application);
+        try {
+            application = applicationRepository.save(application);
+        } catch (DataIntegrityViolationException e) {
+            throw new ApiException(ApiErrorCode.APPLICATION_DUPLICATE);
+        }
 
         insertHistory(application.getId(), null, ApplicationStatus.NEW, userId, null);
 
-        sendApplicationSubmittedNotification(job, candidate, userId);
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        sendApplicationSubmittedNotification(job, candidate, userId);
+                    }
+                });
 
         return enrichResponse(application, job, candidate, userId);
     }
@@ -142,7 +158,12 @@ public class ApplicationServiceImpl implements ApplicationService {
     public PageResponse<ApplicationSummaryResponse> listApplications(
             UUID companyId, UUID jobId, ApplicationStatus status, Pageable pageable) {
 
-        var page = applicationRepository.findByCompanyFiltered(companyId, jobId, status, pageable);
+        // Native query owns ORDER BY — strip sort from Pageable to prevent Spring Data
+        // from appending `ORDER BY a.createdat` (Java field name, not SQL column name).
+        var unsorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+        var page =
+                applicationRepository.findByCompanyFiltered(
+                        companyId, jobId, status != null ? status.name() : null, unsorted);
         var content = page.getContent();
         var summaries = content.stream().map(applicationMapper::toSummaryResponse).toList();
         batchEnrichSummaries(summaries, content);
@@ -236,6 +257,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     // ── Internal helpers ───────────────────────────────────────────────
 
     @Override
+    @Transactional(propagation = Propagation.MANDATORY)
     public void insertHistory(
             UUID applicationId,
             ApplicationStatus oldStatus,

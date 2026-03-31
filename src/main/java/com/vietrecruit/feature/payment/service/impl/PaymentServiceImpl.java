@@ -1,14 +1,13 @@
 package com.vietrecruit.feature.payment.service.impl;
 
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,6 +31,7 @@ import com.vietrecruit.feature.subscription.repository.SubscriptionPlanRepositor
 import com.vietrecruit.feature.subscription.service.SubscriptionService;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +47,7 @@ import vn.payos.model.webhooks.WebhookData;
 public class PaymentServiceImpl implements PaymentService {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final PayOS payOS;
     private final PayOSConfig payOSConfig;
@@ -56,6 +57,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final TransactionRecordRepository transactionRecordRepository;
     private final SubscriptionService subscriptionService;
+    private final SubscriptionActivationService subscriptionActivationService;
     private final PaymentMapper paymentMapper;
     private final Counter webhookSignatureFailureCounter;
 
@@ -68,6 +70,7 @@ public class PaymentServiceImpl implements PaymentService {
             PaymentTransactionRepository paymentTransactionRepository,
             TransactionRecordRepository transactionRecordRepository,
             SubscriptionService subscriptionService,
+            SubscriptionActivationService subscriptionActivationService,
             PaymentMapper paymentMapper,
             MeterRegistry meterRegistry) {
         this.payOS = payOS;
@@ -78,6 +81,7 @@ public class PaymentServiceImpl implements PaymentService {
         this.paymentTransactionRepository = paymentTransactionRepository;
         this.transactionRecordRepository = transactionRecordRepository;
         this.subscriptionService = subscriptionService;
+        this.subscriptionActivationService = subscriptionActivationService;
         this.paymentMapper = paymentMapper;
         this.webhookSignatureFailureCounter =
                 Counter.builder("webhook.signature.failure")
@@ -87,6 +91,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional
+    @Retry(name = "payosPayment", fallbackMethod = "checkoutFallback")
     @CircuitBreaker(name = "payosPayment", fallbackMethod = "checkoutFallback")
     public CheckoutResponse initiateCheckout(UUID companyId, UUID planId, BillingCycle cycle) {
         var plan =
@@ -117,25 +122,26 @@ public class PaymentServiceImpl implements PaymentService {
             return CheckoutResponse.builder().checkoutUrl(null).orderCode(null).build();
         }
 
-        // Cancel any existing pending payment for this company
-        paymentTransactionRepository
-                .findByCompanyIdAndStatus(companyId, PaymentStatus.PENDING)
-                .ifPresent(
-                        existing -> {
-                            existing.setStatus(PaymentStatus.CANCELLED);
-                            paymentTransactionRepository.save(existing);
-                            log.info(
-                                    "Cancelled existing pending payment orderCode={} for company={}",
-                                    existing.getOrderCode(),
-                                    companyId);
-                        });
+        // Cancel any existing pending payments for this company
+        var pendingPayments =
+                paymentTransactionRepository.findByCompanyIdAndStatus(
+                        companyId, PaymentStatus.PENDING);
+        for (var existing : pendingPayments) {
+            existing.setStatus(PaymentStatus.CANCELLED);
+            paymentTransactionRepository.save(existing);
+            log.info(
+                    "Cancelled existing pending payment orderCode={} for company={}",
+                    existing.getOrderCode(),
+                    companyId);
+        }
 
-        // Generate unique order code using timestamp to avoid PayOS duplicates after
-        // local DB reset
+        // Generate unique order code: 13-digit epoch ms + 6-digit cryptographic random suffix.
+        // SecureRandom provides 20 bits of entropy per code (1_000_000 possibilities per ms),
+        // eliminating the 2-digit ThreadLocalRandom window that allowed collision under load.
         Long orderCode =
                 Long.parseLong(
                         System.currentTimeMillis()
-                                + String.valueOf(ThreadLocalRandom.current().nextInt(10, 100)));
+                                + String.format("%06d", SECURE_RANDOM.nextInt(1_000_000)));
 
         // Build PayOS payment link request
         String description = "VietRecruit " + plan.getName() + " - " + cycle.name();
@@ -145,6 +151,22 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         try {
+            // Persist the transaction BEFORE calling PayOS.
+            // If DB write fails the PayOS API is never called, preventing orphaned payment links.
+            // If PayOS call fails, @Transactional rolls back the DB record automatically.
+            PaymentTransaction transaction =
+                    PaymentTransaction.builder()
+                            .orderCode(orderCode)
+                            .companyId(companyId)
+                            .plan(plan)
+                            .billingCycle(cycle)
+                            .amount(amount)
+                            .status(PaymentStatus.PENDING)
+                            .payosReference(String.valueOf(orderCode))
+                            .build();
+
+            paymentTransactionRepository.saveAndFlush(transaction);
+
             PaymentLinkItem item =
                     PaymentLinkItem.builder()
                             .name(plan.getName())
@@ -164,19 +186,8 @@ public class PaymentServiceImpl implements PaymentService {
 
             CreatePaymentLinkResponse response = payOS.paymentRequests().create(paymentRequest);
 
-            PaymentTransaction transaction =
-                    PaymentTransaction.builder()
-                            .orderCode(orderCode)
-                            .companyId(companyId)
-                            .plan(plan)
-                            .billingCycle(cycle)
-                            .amount(amount)
-                            .status(PaymentStatus.PENDING)
-                            .checkoutUrl(response.getCheckoutUrl())
-                            .payosReference(String.valueOf(orderCode))
-                            .build();
-
-            paymentTransactionRepository.save(transaction);
+            // Update the persisted record with the PayOS checkout URL
+            transaction.setCheckoutUrl(response.getCheckoutUrl());
 
             return paymentMapper.toCheckoutResponse(transaction);
 
@@ -273,9 +284,9 @@ public class PaymentServiceImpl implements PaymentService {
                     tx.getCompanyId(),
                     tx.getPlan().getCode());
 
-            // TX 2: Activate subscription in a separate transaction
+            // TX 2: Activate subscription in a separate transaction (via injected bean)
             // If this fails, the recovery job will pick it up
-            tryActivateSubscription(tx);
+            subscriptionActivationService.tryActivateSubscription(tx);
         } else {
             // Payment cancelled or failed
             tx.setStatus(PaymentStatus.CANCELLED);
@@ -288,26 +299,6 @@ public class PaymentServiceImpl implements PaymentService {
                     orderCode,
                     code,
                     data.getDesc());
-        }
-    }
-
-    /**
-     * TX 2: Activate subscription in a separate transaction. If this fails, the PAID status from TX
-     * 1 is already committed and the recovery job will retry.
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void tryActivateSubscription(PaymentTransaction tx) {
-        try {
-            subscriptionService.activateSubscription(
-                    tx.getCompanyId(), tx.getPlan(), tx.getBillingCycle());
-        } catch (Exception e) {
-            log.error(
-                    "Subscription activation failed for orderCode={}, company={}. "
-                            + "Recovery job will retry. Error: {}",
-                    tx.getOrderCode(),
-                    tx.getCompanyId(),
-                    e.getMessage(),
-                    e);
         }
     }
 
@@ -327,8 +318,7 @@ public class PaymentServiceImpl implements PaymentService {
             return;
         }
 
-        subscriptionService.activateSubscription(
-                tx.getCompanyId(), tx.getPlan(), tx.getBillingCycle());
+        subscriptionActivationService.activateSubscription(tx);
 
         log.info(
                 "Recovery: subscription activated for orderCode={}, company={}",

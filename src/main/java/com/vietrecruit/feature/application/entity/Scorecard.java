@@ -12,6 +12,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -30,7 +31,12 @@ import lombok.Setter;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "scorecards")
+@Table(
+        name = "scorecards",
+        uniqueConstraints =
+                @UniqueConstraint(
+                        name = "uq_scorecards_interview_interviewer",
+                        columnNames = {"interview_id", "interviewer_id"}))
 public class Scorecard {
 
     @Id

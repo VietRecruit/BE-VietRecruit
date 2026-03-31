@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.enums.EmailSenderAlias;
@@ -156,18 +158,29 @@ public class AuthServiceImpl implements AuthService {
             candidateRepository.save(Candidate.builder().userId(user.getId()).build());
         }
 
+        // OTP stored before commit: if the transaction rolls back, Redis holds an orphan OTP
+        // that references a non-existent user. Accepted risk — verifyOtp will fail with
+        // AUTH_OTP_EXPIRED when the user lookup returns empty, and the OTP self-expires in 10 min.
         String otpCode = generateOtp();
         authCacheService.storeOtp(request.getEmail(), otpCode, user.getId(), OTP_TTL_SECONDS);
         authCacheService.setCooldown(request.getEmail(), OTP_COOLDOWN_SECONDS);
 
-        notificationService.send(
-                new EmailRequest(
-                        List.of(user.getEmail()),
-                        EmailSenderAlias.AUTHENTICATION,
-                        "Verify Your Email Address",
-                        null,
-                        "email-verification",
-                        Map.of("otpCode", otpCode, "fullName", user.getFullName())));
+        final String userEmail = user.getEmail();
+        final String fullName = user.getFullName();
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        notificationService.send(
+                                new EmailRequest(
+                                        List.of(userEmail),
+                                        EmailSenderAlias.AUTHENTICATION,
+                                        "Verify Your Email Address",
+                                        null,
+                                        "email-verification",
+                                        Map.of("otpCode", otpCode, "fullName", fullName)));
+                    }
+                });
 
         return Map.of("accountType", accountType);
     }
@@ -484,6 +497,10 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void forgotPassword(ForgotPasswordRequest request) {
+        if (authCacheService.isPasswordResetRateLimited(request.getEmail())) {
+            throw new ApiException(ApiErrorCode.TOO_MANY_REQUESTS);
+        }
+
         userRepository
                 .findByEmail(request.getEmail())
                 .ifPresent(
@@ -537,9 +554,17 @@ public class AuthServiceImpl implements AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
-        authCacheService.deleteResetToken(email);
         refreshTokenRepository.revokeAllByUserId(user.getId());
-        authCacheService.evictUser(user.getId());
+
+        final java.util.UUID userId = user.getId();
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        authCacheService.deleteResetToken(email);
+                        authCacheService.evictUser(userId);
+                    }
+                });
 
         log.info("Password reset completed for user: {}. All sessions revoked.", user.getId());
     }

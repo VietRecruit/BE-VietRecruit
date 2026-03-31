@@ -7,6 +7,8 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.enums.EmailSenderAlias;
@@ -17,9 +19,11 @@ import com.vietrecruit.feature.application.dto.response.OfferResponse;
 import com.vietrecruit.feature.application.entity.Application;
 import com.vietrecruit.feature.application.entity.Offer;
 import com.vietrecruit.feature.application.enums.ApplicationStatus;
+import com.vietrecruit.feature.application.enums.InterviewStatus;
 import com.vietrecruit.feature.application.enums.OfferStatus;
 import com.vietrecruit.feature.application.mapper.OfferMapper;
 import com.vietrecruit.feature.application.repository.ApplicationRepository;
+import com.vietrecruit.feature.application.repository.InterviewRepository;
 import com.vietrecruit.feature.application.repository.OfferRepository;
 import com.vietrecruit.feature.application.service.ApplicationService;
 import com.vietrecruit.feature.application.service.OfferService;
@@ -40,6 +44,7 @@ public class OfferServiceImpl implements OfferService {
 
     private final OfferRepository offerRepository;
     private final ApplicationRepository applicationRepository;
+    private final InterviewRepository interviewRepository;
     private final ApplicationService applicationService;
     private final JobRepository jobRepository;
     private final CandidateRepository candidateRepository;
@@ -59,6 +64,14 @@ public class OfferServiceImpl implements OfferService {
 
         if (application.getStatus() != ApplicationStatus.OFFER) {
             throw new ApiException(ApiErrorCode.OFFER_APPLICATION_NOT_READY);
+        }
+
+        // Require at least one completed interview before an offer can be created
+        if (!interviewRepository.existsByApplicationIdAndStatusAndDeletedAtIsNull(
+                applicationId, InterviewStatus.COMPLETED)) {
+            throw new ApiException(
+                    ApiErrorCode.BAD_REQUEST,
+                    "Cannot create an offer: no completed interview exists for this application");
         }
 
         // Check for existing active offer
@@ -184,7 +197,14 @@ public class OfferServiceImpl implements OfferService {
         offer.setUpdatedBy(userId);
         offer = offerRepository.save(offer);
 
-        sendOfferReceivedNotification(offer, application);
+        final Offer sentOffer = offer;
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        sendOfferReceivedNotification(sentOffer, application);
+                    }
+                });
 
         return offerMapper.toResponse(offer);
     }
@@ -250,7 +270,16 @@ public class OfferServiceImpl implements OfferService {
                 userId,
                 isAccept ? "Offer accepted" : "Offer declined");
 
-        sendOfferRespondedNotification(offer, application, candidate, isAccept);
+        final Offer respondedOffer = offer;
+        final Application app = application;
+        final var cand = candidate;
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        sendOfferRespondedNotification(respondedOffer, app, cand, isAccept);
+                    }
+                });
 
         return offerMapper.toResponse(offer);
     }

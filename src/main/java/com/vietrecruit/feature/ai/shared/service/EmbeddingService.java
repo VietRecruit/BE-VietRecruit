@@ -53,11 +53,14 @@ public class EmbeddingService {
         throw new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE);
     }
 
+    private static final int MAX_TOP_K = 100;
+    private static final int DELETE_BATCH_SIZE = 100;
+
     public List<Document> search(String query, int topK, Filter.Expression filter) {
         SearchRequest request =
                 SearchRequest.builder()
                         .query(query)
-                        .topK(topK)
+                        .topK(Math.min(topK, MAX_TOP_K))
                         .filterExpression(filter)
                         .similarityThreshold(vectorStoreProperties.similarityThreshold())
                         .build();
@@ -68,7 +71,7 @@ public class EmbeddingService {
         SearchRequest request =
                 SearchRequest.builder()
                         .query(query)
-                        .topK(topK)
+                        .topK(Math.min(topK, MAX_TOP_K))
                         .similarityThreshold(vectorStoreProperties.similarityThreshold())
                         .build();
         return vectorStore.similaritySearch(request);
@@ -78,17 +81,24 @@ public class EmbeddingService {
         Filter.Expression filter =
                 new Filter.Expression(
                         Filter.ExpressionType.EQ, new Filter.Key(key), new Filter.Value(value));
-        List<Document> docs = search("", 100, filter);
-        if (!docs.isEmpty()) {
-            List<String> ids = docs.stream().map(Document::getId).toList();
+        int offset = 0;
+        int deleted = 0;
+        while (true) {
+            List<Document> batch = search("", DELETE_BATCH_SIZE, filter);
+            if (batch.isEmpty()) break;
+            List<String> ids = batch.stream().map(Document::getId).toList();
             vectorStore.delete(ids);
-            log.debug("Deleted {} documents matching {}={}", ids.size(), key, value);
+            deleted += ids.size();
+            offset += ids.size();
+            if (ids.size() < DELETE_BATCH_SIZE) break;
         }
+        log.debug("Deleted {} documents matching {}={}", deleted, key, value);
     }
 
     @CircuitBreaker(name = "openaiApi", fallbackMethod = "embedFallback")
     public float[] embed(String text) {
-        String hash = sha256(text);
+        String normalized = normalizeForCacheKey(text);
+        String hash = sha256(normalized);
         String cacheKey = CACHE_KEY_PREFIX + hash;
 
         String cached = redisTemplate.opsForValue().get(cacheKey);
@@ -107,6 +117,10 @@ public class EmbeddingService {
     private float[] embedFallback(String text, Throwable t) {
         log.warn("Embedding circuit open. cause={}", t.getMessage());
         throw new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE);
+    }
+
+    private static String normalizeForCacheKey(String text) {
+        return text.strip().replaceAll("\\s+", " ");
     }
 
     private static String sha256(String text) {
