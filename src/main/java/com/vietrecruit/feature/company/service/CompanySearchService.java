@@ -6,5 +6,11 @@ import com.vietrecruit.feature.company.dto.response.CompanySearchResponse;
 
 public interface CompanySearchService {
 
+    /**
+     * Executes a full-text company search against Elasticsearch using the provided filters.
+     *
+     * @param request search parameters including name keyword, industry, and pagination
+     * @return paginated search results with relevance scores
+     */
     SearchPageResponse<CompanySearchResponse> search(CompanySearchRequest request);
 }
