@@ -20,6 +20,16 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
 
     boolean existsByJobIdAndCandidateIdAndDeletedAtIsNull(UUID jobId, UUID candidateId);
 
+    /**
+     * Returns a paginated list of non-deleted applications for the given company, optionally
+     * filtered by job and status.
+     *
+     * @param companyId the owning company's UUID
+     * @param jobId optional job filter; null to include all jobs
+     * @param status optional status string cast to {@code application_status}; null to skip
+     * @param pageable pagination and sort parameters
+     * @return page of matching applications ordered by creation date descending
+     */
     @Query(
             nativeQuery = true,
             value =
@@ -39,6 +49,14 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
             @Param("status") String status,
             Pageable pageable);
 
+    /**
+     * Returns all non-deleted applications submitted by the candidate associated with the given
+     * user ID.
+     *
+     * @param userId the candidate's user UUID
+     * @param pageable pagination and sort parameters
+     * @return page of the candidate's applications
+     */
     @Query(
             "SELECT a FROM Application a JOIN Candidate c ON a.candidateId = c.id "
                     + "WHERE c.userId = :userId AND a.deletedAt IS NULL")
@@ -48,12 +66,26 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
 
     List<Application> findByJobIdAndAiScoreIsNullAndDeletedAtIsNull(UUID jobId);
 
+    /**
+     * Returns a non-deleted application by ID, validating it belongs to the given company.
+     *
+     * @param id the application UUID
+     * @param companyId the owning company's UUID
+     * @return Optional containing the application, or empty if not found or unauthorized
+     */
     @Query(
             "SELECT a FROM Application a JOIN Job j ON a.jobId = j.id "
                     + "WHERE a.id = :id AND j.companyId = :companyId AND a.deletedAt IS NULL")
     Optional<Application> findByIdAndCompanyId(
             @Param("id") UUID id, @Param("companyId") UUID companyId);
 
+    /**
+     * Returns the distinct candidate IDs of all applicants who have applied to jobs at the given
+     * company.
+     *
+     * @param companyId the company's UUID
+     * @return list of distinct candidate UUIDs
+     */
     @Query(
             "SELECT DISTINCT a.candidateId FROM Application a JOIN Job j ON a.jobId = j.id "
                     + "WHERE j.companyId = :companyId AND a.deletedAt IS NULL")

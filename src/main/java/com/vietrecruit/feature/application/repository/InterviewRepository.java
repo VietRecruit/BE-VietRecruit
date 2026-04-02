@@ -17,6 +17,12 @@ public interface InterviewRepository extends JpaRepository<Interview, UUID> {
 
     Optional<Interview> findByIdAndDeletedAtIsNull(UUID id);
 
+    /**
+     * Returns a non-deleted interview by ID with its interviewers collection eagerly loaded.
+     *
+     * @param id the interview's UUID
+     * @return Optional containing the interview with interviewers, or empty if not found
+     */
     @Query(
             "SELECT DISTINCT i FROM Interview i "
                     + "LEFT JOIN FETCH i.interviewers "
@@ -28,6 +34,13 @@ public interface InterviewRepository extends JpaRepository<Interview, UUID> {
     boolean existsByApplicationIdAndStatusAndDeletedAtIsNull(
             UUID applicationId, InterviewStatus status);
 
+    /**
+     * Returns all non-deleted interviews to which the given user is assigned as an interviewer,
+     * ordered by scheduled time descending.
+     *
+     * @param userId the interviewer's user UUID
+     * @return list of interviews for the interviewer
+     */
     @Query(
             "SELECT i FROM Interview i JOIN i.interviewers u "
                     + "WHERE u.id = :userId AND i.deletedAt IS NULL "
