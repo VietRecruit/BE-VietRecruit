@@ -5,8 +5,8 @@ services:
     user: root
     restart: unless-stopped
     volumes:
-      - ../../monitor/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ../../data/prometheus_data:/prometheus
+      - ./monitor/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ../data/data/prometheus_data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
@@ -31,8 +31,8 @@ services:
       - GF_SERVER_DOMAIN=localhost
       - GF_LOG_MODE=console file
     volumes:
-      - ../../grafana-storage:/var/lib/grafana
-      - ../../grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana-storage:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
     ports:
       - "3000:3000"
     networks:
@@ -97,6 +97,69 @@ services:
       - "9114:9114"
     networks:
       - vr-network
+
+  kafka-ui:
+    container_name: vr-kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - 8090:8080
+    networks:
+      - vr-network
+    environment:
+      DYNAMIC_CONFIG_ENABLED: "true"
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: vr-kafka:9092
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: debezium
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://vr-debezium-connect:8083
+    depends_on:
+      - kafka
+      - debezium-kafka-connect
+
+  debezium-ui:
+    image: debezium/debezium-ui:2.5
+    container_name: vr-debezium-ui
+    ports:
+      - "8084:8080"
+    networks:
+      - vr-network
+    environment:
+      KAFKA_CONNECT_URIS: http://vr-debezium-connect:8083
+    depends_on:
+      - debezium-kafka-connect
+
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: vr-loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/config.yaml
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/config.yaml:ro
+      - loki-data:/loki
+    networks:
+      - vr-network
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -q --spider http://localhost:3100/ready || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.17.0
+    container_name: vr-kibana
+    volumes:
+      - ../application/elastic/kibana.yml:/usr/share/kibana/config/kibana.yml
+    ports:
+      - "5601:5601"
+    networks:
+      - vr-network
+    depends_on:
+      - elasticsearch
+
+volumes:
+  loki-data:
+
 
 networks:
   vr-network:
