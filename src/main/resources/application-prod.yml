@@ -59,6 +59,3 @@ server:
         secure: true
         http-only: true
 
-logging:
-  loki:
-    url: ${LOKI_URL:http://vr-loki:3100/loki/api/v1/push}

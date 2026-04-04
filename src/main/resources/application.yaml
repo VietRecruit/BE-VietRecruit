@@ -111,12 +111,10 @@ management:
       group:
         readiness:
           include: readinessState,elasticsearchPopulation
-    prometheus:
-      enabled: true
   endpoints:
     web:
       exposure:
-        include: health, prometheus
+        include: health
 
 server:
   port: ${SERVER_PORT:8080}

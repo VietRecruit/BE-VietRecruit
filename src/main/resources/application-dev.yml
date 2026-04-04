@@ -52,6 +52,3 @@ springdoc:
     path: /vietrecruit/v3/api-docs
   server-url: ${APP_BASE_URL:http://localhost:8080}
 
-logging:
-  loki:
-    url: ${LOKI_URL:http://localhost:3100/loki/api/v1/push}
