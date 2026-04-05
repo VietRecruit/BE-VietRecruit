@@ -27,13 +27,23 @@ public class JwtService {
     private final String issuer;
     private final String audience;
 
+    private static final int MIN_SECRET_BYTES = 64;
+
     public JwtService(
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.access-token-expiration:900000}") long accessTokenExpirationMs,
             @Value("${jwt.refresh-token-expiration:604800000}") long refreshTokenExpirationMs,
             @Value("${jwt.issuer:vietrecruit}") String issuer,
             @Value("${jwt.audience:vietrecruit-api}") String audience) {
-        this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        byte[] secretBytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (secretBytes.length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException(
+                    "JWT_SECRET must be at least "
+                            + MIN_SECRET_BYTES
+                            + " bytes for HS512; got "
+                            + secretBytes.length);
+        }
+        this.signingKey = Keys.hmacShaKeyFor(secretBytes);
         this.accessTokenExpirationMs = accessTokenExpirationMs;
         this.refreshTokenExpirationMs = refreshTokenExpirationMs;
         this.issuer = issuer;
@@ -60,6 +70,7 @@ public class JwtService {
                 .audience()
                 .add(audience)
                 .and()
+                .claim("typ", "access")
                 .claim("roles", roleCodes)
                 .claim("email_verified", emailVerified)
                 .issuedAt(now)
