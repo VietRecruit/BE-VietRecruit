@@ -11,6 +11,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -48,6 +49,7 @@ public class DepartmentController extends BaseController {
 
     @Operation(summary = "Create Department")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyAuthority('ROLE_HR', 'ROLE_COMPANY_ADMIN')")
     @PostMapping
     public ResponseEntity<ApiResponse<DepartmentResponse>> create(
             @Valid @RequestBody DepartmentRequest request) {
@@ -96,6 +98,7 @@ public class DepartmentController extends BaseController {
 
     @Operation(summary = "Update Department")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyAuthority('ROLE_HR', 'ROLE_COMPANY_ADMIN')")
     @PutMapping(ApiConstants.Department.UPDATE)
     public ResponseEntity<ApiResponse<DepartmentResponse>> update(
             @PathVariable UUID id, @Valid @RequestBody DepartmentRequest request) {
@@ -109,6 +112,7 @@ public class DepartmentController extends BaseController {
 
     @Operation(summary = "Delete Department")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyAuthority('ROLE_HR', 'ROLE_COMPANY_ADMIN')")
     @DeleteMapping(ApiConstants.Department.DELETE)
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         var companyId = resolveCompanyId();
