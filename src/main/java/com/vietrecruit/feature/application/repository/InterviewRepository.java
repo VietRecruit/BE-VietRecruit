@@ -29,7 +29,18 @@ public interface InterviewRepository extends JpaRepository<Interview, UUID> {
                     + "WHERE i.id = :id AND i.deletedAt IS NULL")
     Optional<Interview> findByIdWithInterviewers(@Param("id") UUID id);
 
-    List<Interview> findByApplicationIdAndDeletedAtIsNull(UUID applicationId);
+    /**
+     * Returns all non-deleted interviews for an application with their interviewers eagerly loaded.
+     *
+     * @param applicationId the parent application's UUID
+     * @return list of interviews with populated interviewers collections
+     */
+    @Query(
+            "SELECT DISTINCT i FROM Interview i "
+                    + "LEFT JOIN FETCH i.interviewers "
+                    + "WHERE i.applicationId = :applicationId AND i.deletedAt IS NULL")
+    List<Interview> findByApplicationIdAndDeletedAtIsNull(
+            @Param("applicationId") UUID applicationId);
 
     boolean existsByApplicationIdAndStatusAndDeletedAtIsNull(
             UUID applicationId, InterviewStatus status);
@@ -42,7 +53,9 @@ public interface InterviewRepository extends JpaRepository<Interview, UUID> {
      * @return list of interviews for the interviewer
      */
     @Query(
-            "SELECT i FROM Interview i JOIN i.interviewers u "
+            "SELECT DISTINCT i FROM Interview i "
+                    + "LEFT JOIN FETCH i.interviewers "
+                    + "JOIN i.interviewers u "
                     + "WHERE u.id = :userId AND i.deletedAt IS NULL "
                     + "ORDER BY i.scheduledAt DESC")
     List<Interview> findByInterviewerUserId(@Param("userId") UUID userId);
