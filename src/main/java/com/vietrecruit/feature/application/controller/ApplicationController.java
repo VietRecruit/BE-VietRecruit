@@ -129,6 +129,7 @@ public class ApplicationController extends BaseController {
             summary = "Get Application",
             description = "HR or candidate (own) views application detail")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyAuthority('ROLE_HR', 'ROLE_COMPANY_ADMIN', 'ROLE_CANDIDATE')")
     @GetMapping(ApiConstants.Application.GET)
     public ResponseEntity<ApiResponse<ApplicationResponse>> getApplication(@PathVariable UUID id) {
         var userId = SecurityUtils.getCurrentUserId();

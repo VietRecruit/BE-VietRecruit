@@ -87,6 +87,8 @@ public class InterviewController extends BaseController {
             summary = "Get Interview",
             description = "HR, assigned interviewer, or candidate views interview detail")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize(
+            "hasAnyAuthority('ROLE_HR', 'ROLE_COMPANY_ADMIN', 'ROLE_INTERVIEWER', 'ROLE_CANDIDATE')")
     @GetMapping(ApiConstants.Interview.ROOT + ApiConstants.Interview.GET)
     public ResponseEntity<ApiResponse<InterviewResponse>> getInterview(@PathVariable UUID id) {
         var userId = SecurityUtils.getCurrentUserId();
