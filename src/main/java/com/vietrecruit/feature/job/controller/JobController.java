@@ -11,6 +11,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -58,6 +59,7 @@ public class JobController extends BaseController {
 
     @Operation(summary = "Create Job", description = "Creates a new job in DRAFT status")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyAuthority('ROLE_HR', 'ROLE_COMPANY_ADMIN')")
     @PostMapping
     public ResponseEntity<ApiResponse<JobResponse>> createJob(
             @Valid @RequestBody JobCreateRequest request) {
@@ -72,6 +74,7 @@ public class JobController extends BaseController {
 
     @Operation(summary = "Update Job", description = "Updates a DRAFT job's fields")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyAuthority('ROLE_HR', 'ROLE_COMPANY_ADMIN')")
     @PutMapping(ApiConstants.Job.UPDATE)
     public ResponseEntity<ApiResponse<JobResponse>> updateJob(
             @PathVariable UUID id, @Valid @RequestBody JobUpdateRequest request) {
@@ -86,6 +89,7 @@ public class JobController extends BaseController {
             summary = "Publish Job",
             description = "Publishes a DRAFT job. Validates subscription and quota.")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyAuthority('ROLE_HR', 'ROLE_COMPANY_ADMIN')")
     @PutMapping(ApiConstants.Job.PUBLISH)
     public ResponseEntity<ApiResponse<JobResponse>> publishJob(@PathVariable UUID id) {
         var companyId = resolveCompanyId();
@@ -99,6 +103,7 @@ public class JobController extends BaseController {
             summary = "Close Job",
             description = "Closes a PUBLISHED job. Decrements active quota.")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyAuthority('ROLE_HR', 'ROLE_COMPANY_ADMIN')")
     @PutMapping(ApiConstants.Job.CLOSE)
     public ResponseEntity<ApiResponse<JobResponse>> closeJob(@PathVariable UUID id) {
         var companyId = resolveCompanyId();
