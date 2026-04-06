@@ -94,4 +94,12 @@ public interface ApplicationService {
             ApplicationStatus newStatus,
             UUID changedBy,
             String notes);
+
+    /**
+     * Returns distinct candidate IDs that have applied to any job owned by the given company.
+     *
+     * @param companyId the employer's UUID
+     * @return list of candidate UUIDs
+     */
+    List<UUID> findCandidateIdsByCompanyId(UUID companyId);
 }

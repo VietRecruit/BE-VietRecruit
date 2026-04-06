@@ -58,3 +58,10 @@ resilience4j:
         slowCallRateThreshold: 80
         eventConsumerBufferSize: 20
         registerHealthIndicator: true
+      payosReconciliation:
+        slidingWindowSize: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 120s
+        permittedNumberOfCallsInHalfOpenState: 1
+        eventConsumerBufferSize: 20
+        registerHealthIndicator: true

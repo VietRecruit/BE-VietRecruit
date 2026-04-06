@@ -37,11 +37,12 @@ public class OAuth2AuthenticationFailureHandler implements AuthenticationFailure
 
         cookieAuthorizationRequestRepository.removeAuthorizationRequestCookies(request, response);
 
+        // Use generic error code in redirect URL to avoid leaking internal exception details
         String redirectUrl =
                 String.format(
                         "%s/oauth2/callback?error=%s",
                         frontendBaseUrl,
-                        URLEncoder.encode(exception.getMessage(), StandardCharsets.UTF_8));
+                        URLEncoder.encode("authentication_failed", StandardCharsets.UTF_8));
 
         response.sendRedirect(redirectUrl);
     }

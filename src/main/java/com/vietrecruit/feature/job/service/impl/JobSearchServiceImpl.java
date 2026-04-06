@@ -3,6 +3,7 @@ package com.vietrecruit.feature.job.service.impl;
 import static com.vietrecruit.common.config.elasticsearch.ElasticsearchConstants.INDEX_JOBS;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -87,17 +88,17 @@ public class JobSearchServiceImpl implements JobSearchService {
                                                                                                     2))
                                                                     .preTags("<mark>")
                                                                     .postTags("</mark>"))
-                                            .from(request.getPage() * request.getSize())
-                                            .size(request.getSize()),
+                                            .from(
+                                                    Math.min(
+                                                            request.getPage() * request.getSize(),
+                                                            10_000 - request.getSize()))
+                                            .size(request.getSize())
+                                            .trackTotalHits(t -> t.enabled(true)),
                             JobDocument.class);
 
             return mapToSearchPageResponse(response, request.getPage(), request.getSize());
         } catch (IOException e) {
-            log.error("Job search failed: {}", e.getMessage(), e);
-            return emptyResponse(request.getPage(), request.getSize());
-        } catch (RuntimeException e) {
-            log.error("Job search failed (transport/runtime): {}", e.getMessage(), e);
-            return emptyResponse(request.getPage(), request.getSize());
+            throw new UncheckedIOException(e);
         }
     }
 

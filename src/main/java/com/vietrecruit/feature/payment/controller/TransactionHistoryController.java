@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -39,6 +40,7 @@ public class TransactionHistoryController extends BaseController {
             description =
                     "Retrieves paginated transaction history for the authenticated user's company")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyAuthority('ROLE_COMPANY_ADMIN', 'ROLE_HR')")
     @Parameters({
         @Parameter(name = "page", description = "Page number (0-based)", example = "0"),
         @Parameter(name = "size", description = "Page size", example = "20"),
