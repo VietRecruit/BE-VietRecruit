@@ -263,4 +263,19 @@ class AiIngestionConsumerTest {
                                 "deserialization failed".getBytes(),
                                 "ai.cv-uploaded.DLT".getBytes()));
     }
+
+    @Test
+    @DisplayName(
+            "CV DLT handler with null exception headers → completes without NPE (non-retryable"
+                    + " route)")
+    void cvDltHandler_nullExceptionHeaders_completesWithoutNpe() {
+        // Simulates a record arriving at the DLT via the non-retryable path (ApiException excluded
+        // from @RetryableTopic), where Spring Kafka does not inject retry/exception headers
+        CvUploadedEvent event =
+                new CvUploadedEvent(candidateId, "cv/file.pdf", "candidate@example.com");
+        ConsumerRecord<String, CvUploadedEvent> record =
+                new ConsumerRecord<>("ai.cv-uploaded-dlt", 0, 0L, null, event);
+
+        assertDoesNotThrow(() -> cvConsumer.handleDlt(record, null, null, null));
+    }
 }
