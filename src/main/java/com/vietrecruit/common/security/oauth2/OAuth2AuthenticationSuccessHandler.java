@@ -43,6 +43,22 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         String registrationId = oauthToken.getAuthorizedClientRegistrationId();
 
         String email = extractEmail(oAuth2User, registrationId);
+
+        if (email == null || email.isBlank()) {
+            log.warn("OAuth2 login failed: no email available from provider={}", registrationId);
+            cookieAuthorizationRequestRepository.removeAuthorizationRequestCookies(
+                    request, response);
+            String redirectUrl =
+                    String.format(
+                            "%s/oauth2/callback?error=%s",
+                            frontendBaseUrl,
+                            java.net.URLEncoder.encode(
+                                    "email_not_available",
+                                    java.nio.charset.StandardCharsets.UTF_8));
+            response.sendRedirect(redirectUrl);
+            return;
+        }
+
         String providerUserId = extractProviderUserId(oAuth2User, registrationId);
         String name = extractName(oAuth2User);
         String avatarUrl = extractAvatarUrl(oAuth2User, registrationId);
