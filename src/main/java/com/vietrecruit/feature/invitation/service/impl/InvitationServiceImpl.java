@@ -1,5 +1,8 @@
 package com.vietrecruit.feature.invitation.service.impl;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -81,7 +84,9 @@ public class InvitationServiceImpl implements InvitationService {
             throw new ApiException(ApiErrorCode.USER_EMAIL_CONFLICT);
         }
 
-        String token = generateToken();
+        String rawToken = generateToken();
+        // Store SHA-256 hash in DB — plaintext token only exists in the email link
+        String tokenHash = sha256(rawToken);
         Instant expiresAt = Instant.now().plus(INVITATION_TTL_DAYS, ChronoUnit.DAYS);
 
         Invitation invitation =
@@ -89,7 +94,7 @@ public class InvitationServiceImpl implements InvitationService {
                         .companyId(inviter.getCompanyId())
                         .email(request.getEmail())
                         .role(roleCode)
-                        .token(token)
+                        .token(tokenHash)
                         .status("PENDING")
                         .expiresAt(expiresAt)
                         .createdBy(currentUserId)
@@ -98,7 +103,7 @@ public class InvitationServiceImpl implements InvitationService {
 
         invitationRepository.save(invitation);
 
-        String inviteLink = String.format("%s/register/invite?token=%s", frontendBaseUrl, token);
+        String inviteLink = String.format("%s/register/invite?token=%s", frontendBaseUrl, rawToken);
 
         final String email = request.getEmail();
         final String inviterName = inviter.getFullName();
@@ -138,5 +143,15 @@ public class InvitationServiceImpl implements InvitationService {
         byte[] bytes = new byte[TOKEN_BYTES];
         secureRandom.nextBytes(bytes);
         return java.util.HexFormat.of().formatHex(bytes);
+    }
+
+    private static String sha256(String input) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 algorithm not available", e);
+        }
     }
 }
