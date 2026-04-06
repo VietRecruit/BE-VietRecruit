@@ -49,11 +49,13 @@ public class UpdateProfileRequest {
     private String portfolioUrl;
 
     @Schema(description = "User's physical location or address")
+    @Size(max = 255, message = "Location must not exceed 255 characters")
     private String location;
 
     @Schema(description = "Date of birth")
     private LocalDate dob;
 
     @Schema(description = "User's gender", example = "MALE")
+    @Size(max = 20, message = "Gender must not exceed 20 characters")
     private String gender;
 }
