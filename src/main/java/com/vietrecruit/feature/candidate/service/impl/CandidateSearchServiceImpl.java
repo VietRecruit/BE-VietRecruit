@@ -3,6 +3,7 @@ package com.vietrecruit.feature.candidate.service.impl;
 import static com.vietrecruit.common.config.elasticsearch.ElasticsearchConstants.INDEX_CANDIDATES;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -80,17 +81,17 @@ public class CandidateSearchServiceImpl implements CandidateSearchService {
                                                                                                     3))
                                                                     .preTags("<mark>")
                                                                     .postTags("</mark>"))
-                                            .from(request.getPage() * request.getSize())
-                                            .size(request.getSize()),
+                                            .from(
+                                                    Math.min(
+                                                            request.getPage() * request.getSize(),
+                                                            10_000 - request.getSize()))
+                                            .size(request.getSize())
+                                            .trackTotalHits(t -> t.enabled(true)),
                             CandidateDocument.class);
 
             return mapToSearchPageResponse(response, request.getPage(), request.getSize());
         } catch (IOException e) {
-            log.error("Candidate search failed: {}", e.getMessage(), e);
-            return emptyResponse(request.getPage(), request.getSize());
-        } catch (RuntimeException e) {
-            log.error("Candidate search failed (transport/runtime): {}", e.getMessage(), e);
-            return emptyResponse(request.getPage(), request.getSize());
+            throw new UncheckedIOException(e);
         }
     }
 

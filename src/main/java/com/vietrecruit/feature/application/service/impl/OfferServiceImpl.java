@@ -305,8 +305,6 @@ public class OfferServiceImpl implements OfferService {
         offerRepository.save(offer);
     }
 
-    // ── Notifications ──────────────────────────────────────────────────
-
     private void sendOfferReceivedNotification(Offer offer, Application application) {
         try {
             var candidate =

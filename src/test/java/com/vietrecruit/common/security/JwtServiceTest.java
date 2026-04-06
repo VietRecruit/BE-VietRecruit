@@ -107,4 +107,21 @@ class JwtServiceTest {
         long ttl = jwtService.getRemainingTtlMs(claims);
         assertTrue(ttl > 0 && ttl <= accessTokenExpirationMs);
     }
+
+    @Test
+    @DisplayName("Should reject secret shorter than 64 bytes")
+    void shouldRejectShortSecret() {
+        String shortSecret = "tooshort";
+        IllegalStateException ex =
+                assertThrows(
+                        IllegalStateException.class,
+                        () ->
+                                new JwtService(
+                                        shortSecret,
+                                        accessTokenExpirationMs,
+                                        refreshTokenExpirationMs,
+                                        "vietrecruit",
+                                        "vietrecruit-api"));
+        assertTrue(ex.getMessage().contains("64 bytes"));
+    }
 }

@@ -84,6 +84,10 @@ public class PaymentTransaction {
     @Column(name = "paid_at")
     private Instant paidAt;
 
+    @Builder.Default
+    @Column(name = "activation_attempts", nullable = false)
+    private Integer activationAttempts = 0;
+
     @Version private Long version;
 
     @CreationTimestamp

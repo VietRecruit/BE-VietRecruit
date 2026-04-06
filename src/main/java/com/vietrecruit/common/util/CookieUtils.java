@@ -2,6 +2,7 @@ package com.vietrecruit.common.util;
 
 import java.util.Base64;
 import java.util.Optional;
+import java.util.Set;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.jackson2.SecurityJackson2Modules;
+import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -20,6 +22,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class CookieUtils {
+
+    // Only types we actually store in cookies — prevents arbitrary deserialization
+    private static final Set<Class<?>> ALLOWED_DESERIALIZE_TYPES =
+            Set.of(OAuth2AuthorizationRequest.class, String.class);
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -120,6 +126,10 @@ public final class CookieUtils {
      * @return deserialized object, or null on failure
      */
     public static <T> T deserialize(Cookie cookie, Class<T> cls) {
+        if (!ALLOWED_DESERIALIZE_TYPES.contains(cls)) {
+            log.warn("Rejected cookie deserialization for disallowed type: {}", cls.getName());
+            return null;
+        }
         try {
             byte[] bytes = Base64.getUrlDecoder().decode(cookie.getValue());
             return MAPPER.readValue(bytes, cls);

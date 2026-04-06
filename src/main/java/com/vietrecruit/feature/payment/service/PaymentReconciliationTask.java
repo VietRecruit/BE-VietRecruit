@@ -29,9 +29,10 @@ public class PaymentReconciliationTask {
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final PaymentReconciliationExecutor reconciliationExecutor;
 
-    @Scheduled(fixedRate = 600_000) // 10 minutes
-    @Retry(name = "payosPayment", fallbackMethod = "reconciliationFallback")
-    @CircuitBreaker(name = "payosPayment", fallbackMethod = "reconciliationFallback")
+    // fixedDelay prevents overlapping runs if a cycle takes longer than 10 minutes
+    @Scheduled(fixedDelay = 600_000)
+    @Retry(name = "payosReconciliation", fallbackMethod = "reconciliationFallback")
+    @CircuitBreaker(name = "payosReconciliation", fallbackMethod = "reconciliationFallback")
     public void reconcilePendingPayments() {
         var cutoff = Instant.now().minus(STALE_MINUTES, ChronoUnit.MINUTES);
         var lowerBound = Instant.now().minus(MAX_AGE_MINUTES, ChronoUnit.MINUTES);

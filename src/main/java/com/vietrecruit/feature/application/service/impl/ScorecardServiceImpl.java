@@ -11,8 +11,10 @@ import com.vietrecruit.common.enums.ApiErrorCode;
 import com.vietrecruit.common.exception.ApiException;
 import com.vietrecruit.feature.application.dto.request.ScorecardCreateRequest;
 import com.vietrecruit.feature.application.dto.response.ScorecardResponse;
+import com.vietrecruit.feature.application.entity.Application;
 import com.vietrecruit.feature.application.entity.Interview;
 import com.vietrecruit.feature.application.entity.Scorecard;
+import com.vietrecruit.feature.application.enums.ApplicationStatus;
 import com.vietrecruit.feature.application.enums.InterviewStatus;
 import com.vietrecruit.feature.application.mapper.ScorecardMapper;
 import com.vietrecruit.feature.application.repository.ApplicationRepository;
@@ -48,6 +50,18 @@ public class ScorecardServiceImpl implements ScorecardService {
 
         // Validate interview status
         validateInterviewReady(interview);
+
+        // Reject scorecard submission if application is already terminal (HIRED/REJECTED)
+        Application application =
+                applicationRepository
+                        .findByIdAndDeletedAtIsNull(interview.getApplicationId())
+                        .orElseThrow(() -> new ApiException(ApiErrorCode.APPLICATION_NOT_FOUND));
+        if (application.getStatus() == ApplicationStatus.HIRED
+                || application.getStatus() == ApplicationStatus.REJECTED) {
+            throw new ApiException(
+                    ApiErrorCode.BAD_REQUEST,
+                    "Cannot submit scorecard: application is already " + application.getStatus());
+        }
 
         // Validate caller is assigned to this interview
         boolean isAssigned =

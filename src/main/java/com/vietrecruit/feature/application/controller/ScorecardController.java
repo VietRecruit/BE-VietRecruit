@@ -41,6 +41,7 @@ public class ScorecardController extends BaseController {
             summary = "Submit Scorecard",
             description = "Assigned interviewer submits a scorecard for an interview")
     @RateLimiter(name = "mediumTraffic", fallbackMethod = "rateLimit")
+    @PreAuthorize("hasAnyAuthority('ROLE_HR', 'ROLE_COMPANY_ADMIN', 'ROLE_INTERVIEWER')")
     @PostMapping(ApiConstants.Interview.ROOT + ApiConstants.Interview.SCORECARDS)
     public ResponseEntity<ApiResponse<ScorecardResponse>> submitScorecard(
             @PathVariable UUID id, @Valid @RequestBody ScorecardCreateRequest request) {

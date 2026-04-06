@@ -66,6 +66,8 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
 
     List<Application> findByJobIdAndAiScoreIsNullAndDeletedAtIsNull(UUID jobId);
 
+    Page<Application> findByJobIdAndAiScoreIsNullAndDeletedAtIsNull(UUID jobId, Pageable pageable);
+
     /**
      * Returns a non-deleted application by ID, validating it belongs to the given company.
      *

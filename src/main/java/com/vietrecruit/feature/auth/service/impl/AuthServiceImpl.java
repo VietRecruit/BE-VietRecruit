@@ -199,9 +199,11 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void registerByInvite(RegisterByInviteRequest request) {
+        // Hash the raw token from the invite link to match the stored SHA-256 hash
+        String tokenHash = sha256(request.getToken());
         Invitation invitation =
                 invitationRepository
-                        .findByToken(request.getToken())
+                        .findByToken(tokenHash)
                         .orElseThrow(() -> new ApiException(ApiErrorCode.INVITATION_NOT_FOUND));
 
         if (!"PENDING".equals(invitation.getStatus())) {
@@ -271,16 +273,20 @@ public class AuthServiceImpl implements AuthService {
             throw new ApiException(ApiErrorCode.AUTH_OTP_INVALID);
         }
 
+        // Atomically consume OTP — concurrent submissions after this point see null
+        AuthCacheService.OtpContext consumed = authCacheService.consumeOtp(email);
+        if (consumed == null) {
+            throw new ApiException(ApiErrorCode.AUTH_OTP_EXPIRED);
+        }
+
         User user =
                 userRepository
-                        .findById(context.userId())
+                        .findById(consumed.userId())
                         .orElseThrow(() -> new ApiException(ApiErrorCode.AUTH_OTP_EXPIRED));
 
         user.setEmailVerified(true);
         user.setEmailVerifiedAt(Instant.now());
         userRepository.save(user);
-
-        authCacheService.deleteOtp(email);
     }
 
     @Override
@@ -485,12 +491,16 @@ public class AuthServiceImpl implements AuthService {
             java.util.UUID userId = jwtService.extractUserId(claims);
 
             authCacheService.blacklistToken(jti, remainingTtlMs / 1000);
-
             refreshTokenRepository.revokeAllByUserId(userId);
-
             authCacheService.evictUser(userId);
-        } catch (Exception e) {
-            log.debug("Error during logout token processing: {}", e.getMessage());
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            // Extract userId from expired token claims and revoke refresh tokens
+            java.util.UUID userId = jwtService.extractUserId(e.getClaims());
+            refreshTokenRepository.revokeAllByUserId(userId);
+            authCacheService.evictUser(userId);
+            log.debug("Logout with expired token for userId={}", userId);
+        } catch (io.jsonwebtoken.JwtException e) {
+            log.warn("Logout failed: invalid JWT — {}", e.getMessage());
         }
     }
 

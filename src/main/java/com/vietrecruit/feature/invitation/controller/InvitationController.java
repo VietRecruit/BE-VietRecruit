@@ -23,7 +23,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
-@RateLimiter(name = "adminGeneral")
+@RateLimiter(name = "adminGeneral", fallbackMethod = "rateLimit")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(ApiConstants.Invitation.ROOT)

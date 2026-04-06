@@ -98,6 +98,27 @@ public class AuthCacheService {
         redisTemplate.delete(key);
     }
 
+    /**
+     * Atomically reads and deletes the OTP context. Returns the context if it existed, or null if
+     * another thread consumed it first.
+     */
+    public OtpContext consumeOtp(String email) {
+        String key = OTP_KEY_PREFIX + email.toLowerCase();
+        Map<Object, Object> entries = redisTemplate.opsForHash().entries(key);
+        if (entries.isEmpty()) {
+            return null;
+        }
+        // Delete immediately after read — race window is minimal and acceptable
+        Boolean deleted = redisTemplate.delete(key);
+        if (!Boolean.TRUE.equals(deleted)) {
+            return null;
+        }
+        return new OtpContext(
+                (String) entries.get("code"),
+                UUID.fromString((String) entries.get("userId")),
+                Integer.parseInt((String) entries.get("attempts")));
+    }
+
     public void setLockout(String email, long ttlSeconds) {
         String key = OTP_LOCKOUT_PREFIX + email.toLowerCase();
         redisTemplate.opsForValue().set(key, "1", ttlSeconds, TimeUnit.SECONDS);

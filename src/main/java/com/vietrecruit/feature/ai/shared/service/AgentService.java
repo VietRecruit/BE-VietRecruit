@@ -64,15 +64,21 @@ public class AgentService {
             ChatResponse chatResponse = spec.call().chatResponse();
             long durationMs = System.currentTimeMillis() - startMs;
 
-            Usage usage = chatResponse.getMetadata().getUsage();
-            log.info(
-                    "ai_call model={} prompt_tokens={} completion_tokens={} total_tokens={}"
-                            + " duration_ms={}",
-                    chatResponse.getMetadata().getModel(),
-                    usage.getPromptTokens(),
-                    usage.getCompletionTokens(),
-                    usage.getTotalTokens(),
-                    durationMs);
+            if (chatResponse != null
+                    && chatResponse.getMetadata() != null
+                    && chatResponse.getMetadata().getUsage() != null) {
+                Usage usage = chatResponse.getMetadata().getUsage();
+                log.info(
+                        "ai_call model={} prompt_tokens={} completion_tokens={} total_tokens={}"
+                                + " duration_ms={}",
+                        chatResponse.getMetadata().getModel(),
+                        usage.getPromptTokens(),
+                        usage.getCompletionTokens(),
+                        usage.getTotalTokens(),
+                        durationMs);
+            } else {
+                log.info("ai_call duration_ms={} (no usage metadata available)", durationMs);
+            }
 
             String response = null;
             if (chatResponse != null

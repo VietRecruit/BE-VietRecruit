@@ -41,7 +41,12 @@ public class CacheConfig {
         // Caveat: List.of() / Map.of() return package-private final JDK types that cannot be
         // deserialized — always use Collectors.toList() or new ArrayList<>() in cached methods.
         mapper.activateDefaultTyping(
-                BasicPolymorphicTypeValidator.builder().allowIfBaseType(Object.class).build(),
+                BasicPolymorphicTypeValidator.builder()
+                        .allowIfSubType("com.vietrecruit.")
+                        .allowIfSubType("java.util.")
+                        .allowIfSubType("java.lang.")
+                        .allowIfSubType("org.springframework.data.")
+                        .build(),
                 ObjectMapper.DefaultTyping.NON_FINAL,
                 JsonTypeInfo.As.PROPERTY);
         return mapper;

@@ -1,10 +1,13 @@
 package com.vietrecruit.feature.user.service.impl;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
 
+import org.apache.tika.Tika;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -36,6 +39,7 @@ public class ClientUserServiceImpl implements ClientUserService {
 
     private static final long MAX_AVATAR_SIZE_BYTES = 2L * 1024 * 1024; // 2MB
     private static final long MAX_BANNER_SIZE_BYTES = 3L * 1024 * 1024; // 3MB
+    private static final Tika TIKA = new Tika();
 
     private static final Set<String> ALLOWED_IMAGE_TYPES =
             Set.of("image/jpeg", "image/png", "image/webp");
@@ -273,6 +277,15 @@ public class ClientUserServiceImpl implements ClientUserService {
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType)) {
             throw new ApiException(invalidTypeCode);
+        }
+        // Magic byte validation prevents MIME spoofing
+        try (InputStream is = new BufferedInputStream(file.getInputStream())) {
+            String detectedType = TIKA.detect(is);
+            if (!ALLOWED_IMAGE_TYPES.contains(detectedType)) {
+                throw new ApiException(invalidTypeCode);
+            }
+        } catch (IOException e) {
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "Failed to validate file type", e);
         }
         if (file.getSize() > maxSize) {
             throw new ApiException(sizeExceededCode);

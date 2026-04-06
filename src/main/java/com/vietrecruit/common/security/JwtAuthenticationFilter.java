@@ -74,6 +74,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     }
                 }
 
+                // Store parsed claims as request attribute so downstream filters avoid re-parsing
+                request.setAttribute("jwt.claims", claims);
+
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                                 userId.toString(), null, authorities);

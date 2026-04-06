@@ -268,6 +268,8 @@ class AuthServiceImplTest {
         when(authCacheService.isLockedOut("test@example.com")).thenReturn(false);
         when(authCacheService.getOtpContext("test@example.com"))
                 .thenReturn(new AuthCacheService.OtpContext("12345678", testUser.getId(), 0));
+        when(authCacheService.consumeOtp("test@example.com"))
+                .thenReturn(new AuthCacheService.OtpContext("12345678", testUser.getId(), 0));
         when(userRepository.findById(testUser.getId())).thenReturn(Optional.of(testUser));
 
         authService.verifyOtp(request);
@@ -275,7 +277,7 @@ class AuthServiceImplTest {
         assertTrue(testUser.getEmailVerified());
         assertNotNull(testUser.getEmailVerifiedAt());
         verify(userRepository, times(1)).save(testUser);
-        verify(authCacheService, times(1)).deleteOtp("test@example.com");
+        verify(authCacheService, times(1)).consumeOtp("test@example.com");
     }
 
     @Test

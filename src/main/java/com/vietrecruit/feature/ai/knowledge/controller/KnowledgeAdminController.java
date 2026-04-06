@@ -30,7 +30,7 @@ import com.vietrecruit.feature.ai.knowledge.service.KnowledgeIngestionService;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import lombok.RequiredArgsConstructor;
 
-@RateLimiter(name = "adminGeneral")
+@RateLimiter(name = "adminGeneral", fallbackMethod = "rateLimit")
 @RestController
 @RequestMapping("/vietrecruit/admin/knowledge")
 @RequiredArgsConstructor

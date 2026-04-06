@@ -42,3 +42,9 @@ resilience4j:
         exponentialBackoffMultiplier: 2
         enableExponentialBackoff: true
         maxWaitDuration: 5s
+      payosReconciliation:
+        maxAttempts: 2
+        waitDuration: 2s
+        exponentialBackoffMultiplier: 2
+        enableExponentialBackoff: true
+        maxWaitDuration: 10s

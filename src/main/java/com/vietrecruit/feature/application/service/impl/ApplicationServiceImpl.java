@@ -64,7 +64,8 @@ public class ApplicationServiceImpl implements ApplicationService {
                     ApplicationStatus.SCREENING,
                             Set.of(ApplicationStatus.INTERVIEW, ApplicationStatus.REJECTED),
                     ApplicationStatus.INTERVIEW,
-                            Set.of(ApplicationStatus.OFFER, ApplicationStatus.REJECTED));
+                            Set.of(ApplicationStatus.OFFER, ApplicationStatus.REJECTED),
+                    ApplicationStatus.OFFER, Set.of());
 
     @Override
     @Transactional
@@ -254,8 +255,6 @@ public class ApplicationServiceImpl implements ApplicationService {
                 .toList();
     }
 
-    // ── Internal helpers ───────────────────────────────────────────────
-
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
     public void insertHistory(
@@ -276,6 +275,11 @@ public class ApplicationServiceImpl implements ApplicationService {
                         .build();
 
         historyRepository.save(history);
+    }
+
+    @Override
+    public List<UUID> findCandidateIdsByCompanyId(UUID companyId) {
+        return applicationRepository.findCandidateIdsByCompanyId(companyId);
     }
 
     private boolean isCandidateOwner(UUID candidateId, UUID userId) {
@@ -381,8 +385,6 @@ public class ApplicationServiceImpl implements ApplicationService {
             }
         }
     }
-
-    // ── Notifications ──────────────────────────────────────────────────
 
     private void sendApplicationSubmittedNotification(Job job, Candidate candidate, UUID userId) {
         try {
