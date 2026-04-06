@@ -1,5 +1,6 @@
 package com.vietrecruit.feature.application.service.impl;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -96,15 +97,44 @@ public class InterviewServiceImpl implements InterviewService {
             interviewers.add(interviewer);
         }
 
+        int duration = request.getDurationMinutes() != null ? request.getDurationMinutes() : 60;
+        Instant scheduledEnd = request.getScheduledAt().plusSeconds(duration * 60L);
+
+        // Check for interviewer double-booking within the time window
+        for (User interviewer : interviewers) {
+            List<Interview> existing =
+                    interviewRepository.findByInterviewerUserId(interviewer.getId());
+            for (Interview ex : existing) {
+                if (ex.getStatus() != InterviewStatus.SCHEDULED) {
+                    continue;
+                }
+                Instant exEnd =
+                        ex.getScheduledAt()
+                                .plusSeconds(
+                                        (ex.getDurationMinutes() != null
+                                                        ? ex.getDurationMinutes()
+                                                        : 60)
+                                                * 60L);
+                boolean overlaps =
+                        request.getScheduledAt().isBefore(exEnd)
+                                && scheduledEnd.isAfter(ex.getScheduledAt());
+                if (overlaps) {
+                    throw new ApiException(
+                            ApiErrorCode.CONFLICT,
+                            "Interviewer "
+                                    + interviewer.getFullName()
+                                    + " has a conflicting interview at "
+                                    + ex.getScheduledAt());
+                }
+            }
+        }
+
         var interview =
                 Interview.builder()
                         .applicationId(applicationId)
                         .title(request.getTitle())
                         .scheduledAt(request.getScheduledAt())
-                        .durationMinutes(
-                                request.getDurationMinutes() != null
-                                        ? request.getDurationMinutes()
-                                        : 60)
+                        .durationMinutes(duration)
                         .locationOrLink(request.getLocationOrLink())
                         .interviewType(request.getInterviewType())
                         .status(InterviewStatus.SCHEDULED)
@@ -221,8 +251,6 @@ public class InterviewServiceImpl implements InterviewService {
 
         return interviewMapper.toResponse(interview);
     }
-
-    // ── Notifications ──────────────────────────────────────────────────
 
     private void sendInterviewScheduledNotifications(
             Interview interview,
