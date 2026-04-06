@@ -63,23 +63,27 @@ public class EmailVerificationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // Extract email_verified from JWT claims — no DB query
-        String token = extractToken(request);
-        if (token != null) {
-            try {
-                Claims claims = jwtService.parseAndValidate(token);
-                boolean emailVerified = jwtService.extractEmailVerified(claims);
-
-                if (!emailVerified) {
-                    log.debug("Blocked unverified user: userId={}", authentication.getPrincipal());
-                    writeErrorResponse(response);
-                    return;
+        // Read claims from request attribute set by JwtAuthenticationFilter to avoid re-parsing
+        Claims claims = (Claims) request.getAttribute("jwt.claims");
+        if (claims == null) {
+            String token = extractToken(request);
+            if (token != null) {
+                try {
+                    claims = jwtService.parseAndValidate(token);
+                } catch (Exception e) {
+                    log.debug(
+                            "Could not parse token for email verification check: {}",
+                            e.getMessage());
                 }
-            } catch (Exception e) {
-                // Token already validated by JwtAuthenticationFilter; if parsing fails here
-                // it means the token is invalid so we let the request proceed (auth filter
-                // will have already rejected it or it's a non-JWT auth).
-                log.debug("Could not parse token for email verification check: {}", e.getMessage());
+            }
+        }
+
+        if (claims != null) {
+            boolean emailVerified = jwtService.extractEmailVerified(claims);
+            if (!emailVerified) {
+                log.debug("Blocked unverified user: userId={}", authentication.getPrincipal());
+                writeErrorResponse(response);
+                return;
             }
         }
 
