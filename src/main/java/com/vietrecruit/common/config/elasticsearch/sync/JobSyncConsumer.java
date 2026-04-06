@@ -193,18 +193,28 @@ public class JobSyncConsumer {
     }
 
     private String lookupCompanyName(UUID id) {
-        return companyNameCache.get(
-                id, key -> companyRepository.findById(key).map(c -> c.getName()).orElse(null));
+        // Empty string sentinel prevents caching null — missing entities are re-queried after 60s
+        String val =
+                companyNameCache.get(
+                        id,
+                        key -> companyRepository.findById(key).map(c -> c.getName()).orElse(""));
+        return val != null && !val.isEmpty() ? val : null;
     }
 
     private String lookupCategoryName(UUID id) {
-        return categoryNameCache.get(
-                id, key -> categoryRepository.findById(key).map(c -> c.getName()).orElse(null));
+        String val =
+                categoryNameCache.get(
+                        id,
+                        key -> categoryRepository.findById(key).map(c -> c.getName()).orElse(""));
+        return val != null && !val.isEmpty() ? val : null;
     }
 
     private String lookupLocationName(UUID id) {
-        return locationNameCache.get(
-                id, key -> locationRepository.findById(key).map(l -> l.getName()).orElse(null));
+        String val =
+                locationNameCache.get(
+                        id,
+                        key -> locationRepository.findById(key).map(l -> l.getName()).orElse(""));
+        return val != null && !val.isEmpty() ? val : null;
     }
 
     private String extractString(Map<String, Object> map, String key) {
