@@ -29,7 +29,7 @@ public class PaymentWebhookController {
     @Operation(
             summary = "PayOS Webhook",
             description = "Receives payment status updates from PayOS. Secured by HMAC signature.")
-    @RateLimiter(name = "webhookInbound")
+    @RateLimiter(name = "webhookInbound", fallbackMethod = "webhookRateLimit")
     @PostMapping(ApiConstants.Webhook.PAYOS)
     public ResponseEntity<Void> handlePayOSWebhook(@RequestBody Object body) {
         try {
@@ -50,5 +50,11 @@ public class PaymentWebhookController {
             return ResponseEntity.internalServerError().build();
         }
         return ResponseEntity.ok().build();
+    }
+
+    @SuppressWarnings("unused")
+    private ResponseEntity<Void> webhookRateLimit(Object body, Throwable t) {
+        log.warn("Webhook rate limit triggered: {}", t.getMessage());
+        return ResponseEntity.status(429).build();
     }
 }
