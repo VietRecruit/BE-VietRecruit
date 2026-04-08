@@ -5,7 +5,7 @@ import java.util.UUID;
 import jakarta.validation.Valid;
 
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -26,6 +26,7 @@ import com.vietrecruit.common.ApiConstants;
 import com.vietrecruit.common.base.BaseController;
 import com.vietrecruit.common.enums.ApiSuccessCode;
 import com.vietrecruit.common.response.ApiResponse;
+import com.vietrecruit.common.response.PageResponse;
 import com.vietrecruit.common.security.SecurityUtils;
 import com.vietrecruit.feature.location.dto.request.LocationRequest;
 import com.vietrecruit.feature.location.dto.response.LocationResponse;
@@ -71,7 +72,7 @@ public class LocationController extends BaseController {
         @Parameter(name = "sort", description = "Sort field and direction", example = "name,asc")
     })
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<LocationResponse>>> list(
+    public ResponseEntity<ApiResponse<PageResponse<LocationResponse>>> list(
             @ParameterObject
                     @PageableDefault(
                             page = 0,
@@ -80,10 +81,16 @@ public class LocationController extends BaseController {
                             direction = Sort.Direction.ASC)
                     Pageable pageable) {
         var companyId = resolveCompanyId();
+        var all = locationService.listLocations(companyId);
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), all.size());
+        var page =
+                new PageImpl<>(
+                        start >= all.size() ? java.util.List.of() : all.subList(start, end),
+                        pageable,
+                        all.size());
         return ResponseEntity.ok(
-                ApiResponse.success(
-                        ApiSuccessCode.LOCATION_LIST_SUCCESS,
-                        locationService.listLocations(companyId, pageable)));
+                ApiResponse.success(ApiSuccessCode.LOCATION_LIST_SUCCESS, PageResponse.from(page)));
     }
 
     @Operation(summary = "Get Location")

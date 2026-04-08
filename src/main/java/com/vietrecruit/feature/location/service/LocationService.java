@@ -1,9 +1,7 @@
 package com.vietrecruit.feature.location.service;
 
+import java.util.List;
 import java.util.UUID;
-
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 import com.vietrecruit.feature.location.dto.request.LocationRequest;
 import com.vietrecruit.feature.location.dto.response.LocationResponse;
@@ -42,13 +40,12 @@ public interface LocationService {
     LocationResponse getLocation(UUID companyId, UUID locationId);
 
     /**
-     * Returns a paginated list of all locations for the given company.
+     * Returns all locations for the given company, ordered by name ascending.
      *
      * @param companyId the owning company's UUID
-     * @param pageable pagination and sort parameters
-     * @return page of location responses
+     * @return list of location responses
      */
-    Page<LocationResponse> listLocations(UUID companyId, Pageable pageable);
+    List<LocationResponse> listLocations(UUID companyId);
 
     /**
      * Deletes a location owned by the given company.

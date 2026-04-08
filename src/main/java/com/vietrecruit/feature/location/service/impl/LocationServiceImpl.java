@@ -1,10 +1,9 @@
 package com.vietrecruit.feature.location.service.impl;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -77,10 +76,10 @@ public class LocationServiceImpl implements LocationService {
     @org.springframework.cache.annotation.Cacheable(
             value = CacheNames.LOCATION_LIST,
             key = "#companyId")
-    public Page<LocationResponse> listLocations(UUID companyId, Pageable pageable) {
-        return locationRepository
-                .findByCompanyId(companyId, pageable)
-                .map(locationMapper::toResponse);
+    public List<LocationResponse> listLocations(UUID companyId) {
+        return locationRepository.findByCompanyIdOrderByNameAsc(companyId).stream()
+                .map(locationMapper::toResponse)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
