@@ -1,7 +1,6 @@
 package com.vietrecruit.feature.payment.controller;
 
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -15,6 +14,7 @@ import com.vietrecruit.common.ApiConstants;
 import com.vietrecruit.common.base.BaseController;
 import com.vietrecruit.common.enums.ApiSuccessCode;
 import com.vietrecruit.common.response.ApiResponse;
+import com.vietrecruit.common.response.PageResponse;
 import com.vietrecruit.feature.payment.dto.response.TransactionHistoryResponse;
 import com.vietrecruit.feature.payment.service.TransactionHistoryService;
 
@@ -50,7 +50,7 @@ public class TransactionHistoryController extends BaseController {
                 example = "createdAt,desc")
     })
     @GetMapping(ApiConstants.Payment.TRANSACTIONS)
-    public ResponseEntity<ApiResponse<Page<TransactionHistoryResponse>>> getTransactions(
+    public ResponseEntity<ApiResponse<PageResponse<TransactionHistoryResponse>>> getTransactions(
             @ParameterObject
                     @PageableDefault(
                             page = 0,
@@ -62,6 +62,8 @@ public class TransactionHistoryController extends BaseController {
         return ResponseEntity.ok(
                 ApiResponse.success(
                         ApiSuccessCode.TRANSACTION_HISTORY_FETCH_SUCCESS,
-                        transactionHistoryService.getCompanyTransactions(companyId, pageable)));
+                        PageResponse.from(
+                                transactionHistoryService.getCompanyTransactions(
+                                        companyId, pageable))));
     }
 }

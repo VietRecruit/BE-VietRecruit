@@ -5,7 +5,6 @@ import java.util.UUID;
 import jakarta.validation.Valid;
 
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -26,6 +25,7 @@ import com.vietrecruit.common.ApiConstants;
 import com.vietrecruit.common.base.BaseController;
 import com.vietrecruit.common.enums.ApiSuccessCode;
 import com.vietrecruit.common.response.ApiResponse;
+import com.vietrecruit.common.response.PageResponse;
 import com.vietrecruit.common.security.SecurityUtils;
 import com.vietrecruit.feature.department.dto.request.DepartmentRequest;
 import com.vietrecruit.feature.department.dto.response.DepartmentResponse;
@@ -71,7 +71,7 @@ public class DepartmentController extends BaseController {
         @Parameter(name = "sort", description = "Sort field and direction", example = "name,asc")
     })
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<DepartmentResponse>>> list(
+    public ResponseEntity<ApiResponse<PageResponse<DepartmentResponse>>> list(
             @ParameterObject
                     @PageableDefault(
                             page = 0,
@@ -83,7 +83,7 @@ public class DepartmentController extends BaseController {
         return ResponseEntity.ok(
                 ApiResponse.success(
                         ApiSuccessCode.DEPARTMENT_LIST_SUCCESS,
-                        departmentService.listDepartments(companyId, pageable)));
+                        PageResponse.from(departmentService.listDepartments(companyId, pageable))));
     }
 
     @Operation(summary = "Get Department")

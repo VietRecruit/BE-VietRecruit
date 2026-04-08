@@ -3,7 +3,6 @@ package com.vietrecruit.feature.payment.controller;
 import java.util.UUID;
 
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -18,6 +17,7 @@ import com.vietrecruit.common.ApiConstants;
 import com.vietrecruit.common.base.BaseController;
 import com.vietrecruit.common.enums.ApiSuccessCode;
 import com.vietrecruit.common.response.ApiResponse;
+import com.vietrecruit.common.response.PageResponse;
 import com.vietrecruit.feature.payment.dto.response.TransactionHistoryResponse;
 import com.vietrecruit.feature.payment.service.TransactionHistoryService;
 
@@ -54,7 +54,7 @@ public class AdminTransactionController extends BaseController {
                 example = "createdAt,desc")
     })
     @GetMapping(ApiConstants.AdminPayment.TRANSACTIONS)
-    public ResponseEntity<ApiResponse<Page<TransactionHistoryResponse>>> getAllTransactions(
+    public ResponseEntity<ApiResponse<PageResponse<TransactionHistoryResponse>>> getAllTransactions(
             @RequestParam(required = false) UUID companyId,
             @ParameterObject
                     @PageableDefault(
@@ -64,14 +64,14 @@ public class AdminTransactionController extends BaseController {
                             direction = Sort.Direction.DESC)
                     Pageable pageable) {
 
-        Page<TransactionHistoryResponse> result;
-        if (companyId != null) {
-            result = transactionHistoryService.getCompanyTransactions(companyId, pageable);
-        } else {
-            result = transactionHistoryService.getAllTransactions(pageable);
-        }
+        var result =
+                companyId != null
+                        ? transactionHistoryService.getCompanyTransactions(companyId, pageable)
+                        : transactionHistoryService.getAllTransactions(pageable);
 
         return ResponseEntity.ok(
-                ApiResponse.success(ApiSuccessCode.TRANSACTION_HISTORY_FETCH_SUCCESS, result));
+                ApiResponse.success(
+                        ApiSuccessCode.TRANSACTION_HISTORY_FETCH_SUCCESS,
+                        PageResponse.from(result)));
     }
 }
