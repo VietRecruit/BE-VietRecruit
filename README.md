@@ -9,12 +9,16 @@
     <a href="https://debezium.io/" target="_blank"><img src="assets/img/debeziumio.svg" height="90" alt="Debezium" /></a>&nbsp;
     <a href="https://www.docker.com/" target="_blank"><img src="assets/img/docker.svg" height="90" alt="Docker" /></a>&nbsp;
     <a href="https://jenkins.io/" target="_blank"><img src="assets/img/jenkins.svg" height="90" alt="Jenkins" /></a>&nbsp;
-    <a href="https://prometheus.io/" target="_blank"><img src="assets/img/prometheus.svg" height="90" alt="Prometheus" /></a>&nbsp;
-    <a href="https://grafana.com/" target="_blank"><img src="assets/img/grafana.svg" height="90" alt="Grafana" /></a>
 </p>
 
-# VietRecruit
+# Applicant tracking job portal — Backend
 
-<p align="center">
-    <a href="https://example.com" target="_blank"><img src="assets/img/vietrecruit-banner.svg" height="300" alt="VietRecruit" /></a>&nbsp;
-</p>
+Backend service for VietRecruit, Applicant Tracking System and job portal.
+
+## Overview
+
+VietRecruit serves two distinct user bases. Candidates build structured profiles and CVs, search published job listings, and submit applications directly through the platform. Employers — company administrators and HR staff — manage company branding, configure internal departments, purchase subscription plans through a PayOS integration to acquire job posting quotas, and publish open roles.
+
+The ATS subsystem tracks each candidate through a defined pipeline: application receipt, interview scheduling with cross-interviewer scorecards, offer generation, and final acceptance or rejection. Role-based access control enforces boundaries between `SYSTEM_ADMIN`, `CUSTOMER_SERVICE`, `COMPANY_ADMIN`, `HR`, `INTERVIEWER`, and `CANDIDATE` principals at every layer.
+
+The system follows a Modular Monolith architecture with Domain-Driven Design. Each feature module encapsulates its own controller, service, repository, entity, mapper, and DTO layers, with no cross-module repository access permitted. Cross-cutting infrastructure (security, caching, messaging, search) lives in a shared `common/` package. For the complete architecture map, module responsibilities, and infrastructure topology, refer to [`docs/`](docs/).
