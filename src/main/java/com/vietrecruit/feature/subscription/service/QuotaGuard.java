@@ -52,8 +52,12 @@ public class QuotaGuard {
      */
     @org.springframework.transaction.annotation.Transactional
     public void decrementActiveJobs(UUID companyId) {
-        var subscription = getActiveSubscription(companyId);
-        quotaRepository.atomicDecrementActiveJobs(subscription.getId());
+        // Use Optional lookup — subscription may be CANCELLED or absent (e.g. employer cancelled
+        // while a job was still PUBLISHED). In that case there is no quota row to decrement;
+        // the job must still be closeable, so we silently skip rather than throw.
+        subscriptionRepository
+                .findActiveByCompanyId(companyId, SubscriptionStatus.ACTIVE)
+                .ifPresent(sub -> quotaRepository.atomicDecrementActiveJobs(sub.getId()));
     }
 
     private EmployerSubscription getActiveSubscription(UUID companyId) {
