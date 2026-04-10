@@ -14,6 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.vietrecruit.common.config.cache.CacheEventPublisher;
 import com.vietrecruit.common.enums.ApiErrorCode;
@@ -58,7 +60,13 @@ class JobServiceImplConcurrencyTest {
 
     @BeforeEach
     void setUp() {
+        TransactionSynchronizationManager.initSynchronization();
         companyId = UUID.randomUUID();
+    }
+
+    @AfterEach
+    void tearDown() {
+        TransactionSynchronizationManager.clearSynchronization();
     }
 
     // ── Scenario: quota = 1, 10 concurrent publish attempts ────────────────
@@ -108,11 +116,17 @@ class JobServiceImplConcurrencyTest {
                             () -> {
                                 try {
                                     startGate.await();
+                                    TransactionSynchronizationManager.initSynchronization();
                                     jobService.publishJob(companyId, jobId);
                                 } catch (ApiException e) {
                                     // expected for quota-exceeded threads
                                 } catch (InterruptedException e) {
                                     Thread.currentThread().interrupt();
+                                } finally {
+                                    if (TransactionSynchronizationManager
+                                            .isSynchronizationActive()) {
+                                        TransactionSynchronizationManager.clearSynchronization();
+                                    }
                                 }
                             }));
         }

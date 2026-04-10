@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.vietrecruit.common.config.cache.CacheEventPublisher;
 import com.vietrecruit.common.enums.ApiErrorCode;
@@ -43,6 +45,7 @@ class JobServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        TransactionSynchronizationManager.initSynchronization();
         companyId = UUID.randomUUID();
         userId = UUID.randomUUID();
         jobId = UUID.randomUUID();
@@ -54,6 +57,11 @@ class JobServiceImplTest {
                         .description("Build things")
                         .status(JobStatus.DRAFT)
                         .build();
+    }
+
+    @AfterEach
+    void tearDown() {
+        TransactionSynchronizationManager.clearSynchronization();
     }
 
     @Test
