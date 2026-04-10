@@ -144,6 +144,8 @@ public class JobSearchServiceImpl implements JobSearchService {
                     .map(Hit::source)
                     .filter(doc -> doc != null && doc.getTitle() != null)
                     .map(JobDocument::getTitle)
+                    .distinct()
+                    .limit(limit)
                     .collect(Collectors.toList());
         } catch (IOException e) {
             log.error("Job autocomplete failed: {}", e.getMessage(), e);
